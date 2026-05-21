@@ -1,4 +1,4 @@
-﻿package backend.data;
+package backend.model;
 
 public record ContactRecord(
     String firstName,
@@ -12,6 +12,7 @@ public record ContactRecord(
     public ContactRecord {
         firstName = normalize(firstName);
         lastName = normalize(lastName);
+        fullName = normalize(fullName);
         email = normalize(email);
         if (email != null) email = email.toLowerCase();
         company = normalize(company);

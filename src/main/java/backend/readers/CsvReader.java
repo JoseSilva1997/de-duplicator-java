@@ -1,7 +1,7 @@
-﻿package backend.file_readers;
+package backend.readers;
 
-import backend.data.ContactField;
-import backend.data.ContactRecord;
+import backend.model.ContactField;
+import backend.model.ContactRecord;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -43,34 +43,19 @@ public final class CsvReader implements IFileReader {
                 CSVRecord headerRow = it.next();
                 List<String> headerCells = new ArrayList<>();
                 for (String cell : headerRow) headerCells.add(cell);
+
+                // Create a resolver and mapper based on the header row
                 HeaderResolver resolver = new HeaderResolver(headerCells);
+                ContactRecordMapper recordMapper = new ContactRecordMapper(resolver);  
                 
                 // Remaining rows = data
                 while (it.hasNext()) {
                     CSVRecord row = it.next();
-                    ContactRecord record = buildRecord(row, resolver);
+                    ContactRecord record = recordMapper.map(row::get);
                     if (record != null) records.add(record);
                 }
         }
         return Map.of(sheetName, records);
-    }
-
-    private static ContactRecord buildRecord(CSVRecord row, HeaderResolver resolver) {
-        String firstName = cell(row, resolver.indexOf(ContactField.FIRST_NAME));
-        String lastName = cell(row, resolver.indexOf(ContactField.LAST_NAME));
-        String fullName = cell(row, resolver.indexOf(ContactField.FULL_NAME));
-        String email = cell(row, resolver.indexOf(ContactField.EMAIL));
-        String company = cell(row, resolver.indexOf(ContactField.COMPANY));
-        String jobTitle = cell(row, resolver.indexOf(ContactField.JOB_TITLE));
-
-        ContactRecord record = new ContactRecord(firstName, lastName, fullName, email, company, jobTitle);
-        return record.isEmpty() ? null : record; // Skip empty records
-    }
-
-
-    private static String cell(CSVRecord row, int index) {
-        if (index < 0 || index >= row.size()) return null;
-        return row.get(index);
     }
 
     // Helper method to generate a synthetic sheet name from the file name (without extension).

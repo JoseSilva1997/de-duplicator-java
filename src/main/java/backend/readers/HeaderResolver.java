@@ -1,6 +1,6 @@
-﻿package backend.file_readers;
+package backend.readers;
 
-import backend.data.ContactField;
+import backend.model.ContactField;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;

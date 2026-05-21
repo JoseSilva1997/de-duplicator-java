@@ -1,9 +1,9 @@
-﻿package backend.file_readers;
+package backend.readers;
 
 import java.util.List;
 import java.util.Map;
 
-import backend.data.ContactRecord;
+import backend.model.ContactRecord;
 
 import java.io.IOException;
 import java.nio.file.Path;
