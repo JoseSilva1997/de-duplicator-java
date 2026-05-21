@@ -1,4 +1,4 @@
-package backend.data;
+﻿package backend.data;
 
 import java.util.List;
 
@@ -23,4 +23,5 @@ public enum ContactField {
         return aliases;
     }
 }
+
 

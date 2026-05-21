@@ -1,4 +1,4 @@
-package gui;
+﻿package gui;
 
 import java.awt.Color;
 
@@ -15,3 +15,4 @@ final class Theme {
 
     private Theme() {}
 }
+

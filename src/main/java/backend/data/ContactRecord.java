@@ -1,4 +1,4 @@
-package backend.file_readers;
+﻿package backend.data;
 
 public record ContactRecord(
     String firstName,
@@ -24,4 +24,14 @@ public record ContactRecord(
         return normalized.isEmpty() ? null : normalized;
     }
 
+    public boolean isEmpty() {
+        return firstName == null
+            && lastName == null
+            && fullName == null
+            && email == null
+            && company == null
+            && jobTitle == null;
+    }
+
 }
+

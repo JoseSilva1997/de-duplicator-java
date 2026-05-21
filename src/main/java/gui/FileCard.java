@@ -1,4 +1,4 @@
-package gui;
+﻿package gui;
 
 import javax.swing.*;
 import java.awt.*;
@@ -81,3 +81,4 @@ class FileCard extends JPanel {
         return selectedFile;
     }
 }
+

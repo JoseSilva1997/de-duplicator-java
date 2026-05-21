@@ -1,4 +1,4 @@
-package gui;
+﻿package gui;
 
 import javax.swing.*;
 import java.awt.*;
@@ -112,7 +112,7 @@ public class Gui extends JFrame {
     private void onRemoveDuplicates() {
         File guest = guestCard.getFile();
         File attendees = attendeeCard.getFile();
-        // Hand off to processing logic — wired up by App.
+        // Hand off to processing logic â€” wired up by App.
         JOptionPane.showMessageDialog(this,
                 "Processing:\n" + guest.getName() + "\n" + attendees.getName(),
                 "Remove Duplicates",
@@ -130,3 +130,4 @@ public class Gui extends JFrame {
         SwingUtilities.invokeLater(() -> new Gui().setVisible(true));
     }
 }
+

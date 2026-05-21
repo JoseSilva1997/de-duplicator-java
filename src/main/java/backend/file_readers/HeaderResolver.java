@@ -1,10 +1,9 @@
-package backend.file_readers;
+﻿package backend.file_readers;
 
+import backend.data.ContactField;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
-
-import backend.data.ContactField;
 
 /**
  * Resolves header cells to standard contact fields using normalization and alias matching.
@@ -34,7 +33,7 @@ public final class HeaderResolver {
         if (headerMap.containsKey(ContactField.FIRST_NAME) && headerMap.containsKey(ContactField.LAST_NAME)) {
             headerMap.remove(ContactField.FULL_NAME);
         }
-        
+
         // No recognized fields found, likely a malformed header row.
         if (headerMap.isEmpty()) {
             throw new IllegalArgumentException("No recognized contact fields found in header: " + headerCells);
@@ -56,3 +55,4 @@ public final class HeaderResolver {
         return headerCell.toLowerCase().replaceAll("[^a-z0-9]", "");
     }
 }
+

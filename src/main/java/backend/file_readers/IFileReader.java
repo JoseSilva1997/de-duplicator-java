@@ -1,8 +1,10 @@
-package backend.file_readers;
+﻿package backend.file_readers;
 
-import backend.data.ContactRecord;
 import java.util.List;
 import java.util.Map;
+
+import backend.data.ContactRecord;
+
 import java.io.IOException;
 import java.nio.file.Path;
 
@@ -26,3 +28,4 @@ public interface IFileReader {
      */
     Map<String, List<ContactRecord>> read(Path filePath, List<String> sheetNames) throws IOException;
 }
+
