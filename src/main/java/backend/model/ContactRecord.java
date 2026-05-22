@@ -14,6 +14,10 @@ public record ContactRecord(
         lastName = normalize(lastName);
         fullName = normalize(fullName);
         email = normalize(email);
+        // Email is the only field lowercased — emails are normally case-insensitive,
+        // and dedup compares them with plain equals. Name/company keep original casing
+        // so output to user looks like input; case-insensitivity in dedup is the
+        // strategy layer's job.
         if (email != null) email = email.toLowerCase();
         company = normalize(company);
         jobTitle = normalize(jobTitle);

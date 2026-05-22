@@ -52,6 +52,8 @@ public final class CsvReader implements IFileReader {
                 // Remaining rows = data
                 while (it.hasNext()) {
                     CSVRecord row = it.next();
+                    // commons-csv's CSVRecord.get(int) throws on out-of-range index. Real-world
+                    // CSVs often have ragged rows (header has N columns, some data rows have fewer).
                     ContactRecord record = recordMapper.map(idx -> idx < row.size() ? row.get(idx) : null);
                     if (record != null) records.add(record);
                 }

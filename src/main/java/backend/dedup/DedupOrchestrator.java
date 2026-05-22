@@ -40,6 +40,11 @@ public final class DedupOrchestrator {
                 continue;
             }
 
+            // Iterate candidates and look up each in the hit map (rather than iterating
+            // the map). If primary has duplicate records (e.g., the same person listed
+            // twice), Map.put collapses them into one entry — but iterating candidates
+            // and calling hits.get(r) returns the same confidence for each duplicate,
+            // so all duplicates get correctly removed.
             List<ContactRecord> stillCandidates = new ArrayList<>(candidates.size());
             for (ContactRecord r : candidates) {
                 Integer confidence = hits.get(r);

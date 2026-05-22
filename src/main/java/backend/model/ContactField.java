@@ -8,20 +8,24 @@ import java.util.List;
  * Entries should be ordered by likelihood of occurrence in real-world data to optimize header resolution performance.
  */
 public enum ContactField {
-    FIRST_NAME(List.of("firstname", "name")),
-    LAST_NAME(List.of("lastname", "lname", "surname")),
-    FULL_NAME(List.of("fullname")),
-    EMAIL(List.of("email", "emailaddress")),
-    COMPANY(List.of("company", "organization", "companyname", "organisation")),
-    JOB_TITLE(List.of("jobtitle", "position", "job", "role"));
+    FIRST_NAME("First Name", List.of("firstname", "name")),
+    LAST_NAME("Last Name", List.of("lastname", "lname", "surname")),
+    FULL_NAME("Full Name", List.of("fullname")),
+    EMAIL("Email", List.of("email", "emailaddress")),
+    COMPANY("Company", List.of("company", "organization", "companyname", "organisation")),
+    JOB_TITLE("Job Title", List.of("jobtitle", "position", "job", "role"));
 
+    private final String label;
     private final List<String> aliases;
-    ContactField(List<String> aliases) {
+    
+    ContactField(String label, List<String> aliases) {
+        this.label = label;
         this.aliases = aliases;
     }
-    public List<String> aliases() {
-        return aliases;
-    }
+
+    public String label() { return label; }
+
+    public List<String> aliases() { return aliases; }
 }
 
 

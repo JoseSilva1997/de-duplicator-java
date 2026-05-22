@@ -21,7 +21,10 @@ public final class FuzzyKeyStrategy implements DedupStrategy {
     @Override
     public String name() { return "fuzzy_key";}
 
-     @Override
+    // requiredFields() is empty because this strategy accepts either
+    // (FIRST_NAME + LAST_NAME) OR FULL_NAME — a disjunction the interface
+    // can't express. The per-row eligibility check in indexOf(...) handles it.
+    @Override
     public Set<ContactField> requiredFields() { 
         return Set.of(ContactField.FIRST_NAME, ContactField.LAST_NAME, ContactField.COMPANY); 
     }
@@ -46,7 +49,10 @@ public final class FuzzyKeyStrategy implements DedupStrategy {
 
             // Check if any secondary key has a high token overlap with the primary key.
             for (KeyTokens cand : secondaryIndex) {
-                // Pre-filter: require at least one shared token.
+                // Pre-filter: only score candidate pairs that share at least one token
+                // after splitting on '|' or whitespace. This is a heuristic; in theory two
+                // keys could exceed the 80% threshold while sharing no tokens, but in
+                // practice it's vanishingly rare and the speedup is significant.
                 if (Collections.disjoint(primaryTokens, cand.tokens())) continue;
                 if (FuzzySearch.tokenSetRatio(primaryKey, cand.key()) >= THRESHOLD) {
                     matches.put(record, CONFIDENCE);

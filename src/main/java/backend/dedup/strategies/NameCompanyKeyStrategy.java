@@ -32,6 +32,11 @@ public final class NameCompanyKeyStrategy implements DedupStrategy {
                 .collect(Collectors.toSet());
 
         Map<ContactRecord, Integer> matches = new LinkedHashMap<>();
+        // Per-row eligibility check: requiredFields() guarantees the sheet has
+        // these columns, but individual cells can still be blank. A record missing
+        // any of the three would produce a key like "john||" that could falsely
+        // match another similarly-thin record. Both primary and secondary apply
+        // the same all-three-non-null filter.
         for (ContactRecord record : primary) {
             if (record.firstName() == null || record.lastName() == null || record.company() == null) continue;
             String key = NormalisationUtils.keyFor(record);

@@ -76,7 +76,9 @@ public final class ExcelReader implements IFileReader {
         return FORMATTER.formatCellValue(cell);  
     }
 
-    // Some sheets may have leading empty rows before the header. We try to detect and skip them.
+    // Real-world spreadsheets sometimes have blank rows above the header (manual
+    // formatting, copy-paste artifacts). Scan down to the first row with any
+    // non-blank content and treat that as the header.
     private static int findHeaderRowIndex(Sheet sheet) {
         int lastRow = sheet.getLastRowNum();
         for (int r = 0; r <= lastRow; r++) {

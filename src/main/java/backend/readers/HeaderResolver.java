@@ -20,6 +20,10 @@ public final class HeaderResolver {
 
         List<String> normalized = headerCells.stream().map(HeaderResolver::normalize).toList();
 
+        // Alias-order wins, NOT column-order: for each ContactField we iterate its
+        // aliases in declared order and take the first matching header. A sheet with
+        // both "Name" and "First Name" columns will claim FIRST_NAME via "firstname"
+        // (declared first), regardless of which column came first in the source.
         for(ContactField field : ContactField.values()) {
             outer:
             for(String alias : field.aliases()) {
@@ -32,7 +36,8 @@ public final class HeaderResolver {
             }
         }
 
-        // If both FIRST_NAME and LAST_NAME mapped, drop FULL_NAME.
+        // If a sheet has structured first+last AND a "Full Name" column, treat the
+        // split as canonical and ignore the redundant Name column..
         if (headerMap.containsKey(ContactField.FIRST_NAME) && headerMap.containsKey(ContactField.LAST_NAME)) {
             headerMap.remove(ContactField.FULL_NAME);
         }
