@@ -1,4 +1,4 @@
-package backend.dedup;
+package backend;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -6,6 +6,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import backend.dedup.DedupOrchestrator;
+import backend.dedup.DedupResult;
 import backend.model.ContactRecord;
 import backend.model.SheetData;
 import backend.readers.FileReaderFactory;

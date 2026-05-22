@@ -3,15 +3,20 @@ package gui;
 import javax.swing.*;
 import java.awt.*;
 import java.io.File;
+import java.util.List;
 
 class FileCard extends JPanel {
 
     private final JLabel statusLabel;
     private final Runnable onChange;
     private File selectedFile;
+    private final SheetSelector sheetSelector;
+    private List<String> selectedSheets;
 
-    FileCard(String title, String description, Runnable onChange) {
+
+    FileCard(String title, String description, SheetSelector sheetSelector, Runnable onChange) {
         this.onChange = onChange;
+        this.sheetSelector = sheetSelector;
 
         setBackground(Theme.CARD);
         setBorder(BorderFactory.createCompoundBorder(
@@ -55,22 +60,31 @@ class FileCard extends JPanel {
     private void openFileChooser() {
         Window owner = SwingUtilities.getWindowAncestor(this);
         Frame parent = owner instanceof Frame ? (Frame) owner : null;
-        FileDialog dialog = new FileDialog(parent, "Select Excel file", FileDialog.LOAD);
+        FileDialog dialog = new FileDialog(parent, "Select spreadsheet", FileDialog.LOAD);
         dialog.setFilenameFilter((dir, name) -> {
             String lower = name.toLowerCase();
-            return lower.endsWith(".xlsx") || lower.endsWith(".xls");
+            return lower.endsWith(".xlsx") || lower.endsWith(".xls") || lower.endsWith(".csv");
         });
-        dialog.setFile("*.xlsx;*.xls");
+        dialog.setFile("*.xlsx;*.xls;*.csv");
         dialog.setVisible(true);
 
         String filename = dialog.getFile();
         String directory = dialog.getDirectory();
         if (filename != null && directory != null) {
-            selectedFile = new File(directory, filename);
-            statusLabel.setText(selectedFile.getName());
+            File chosen = new File(directory, filename);
+            List<String> sheets = sheetSelector.select(chosen);
+            if (sheets == null) return;   // user cancelled the picker — keep current state
+
+            selectedFile = chosen;
+            selectedSheets = sheets;
+            statusLabel.setText(chosen.getName());
             statusLabel.setForeground(Theme.SUCCESS);
             onChange.run();
         }
+    }
+
+    List<String> getSelectedSheets() {
+        return selectedSheets;
     }
 
     boolean hasFile() {

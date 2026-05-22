@@ -22,12 +22,14 @@ public final class ExcelReader implements IFileReader {
     public List<String> listSheets(Path filePath) throws IOException {
         try (InputStream input = Files.newInputStream(filePath);
             Workbook workbook = WorkbookFactory.create(input)) {
-                List<String> sheetNames = new ArrayList<>(workbook.getNumberOfSheets());
-                for (int i = 0; i < workbook.getNumberOfSheets(); i++) {
+            List<String> sheetNames = new ArrayList<>(workbook.getNumberOfSheets());
+            for (int i = 0; i < workbook.getNumberOfSheets(); i++) {
+                if (workbook.getSheetVisibility(i) == SheetVisibility.VISIBLE) {
                     sheetNames.add(workbook.getSheetAt(i).getSheetName());
                 }
-                return sheetNames;
             }
+            return sheetNames;
+        }
     }
 
     @Override

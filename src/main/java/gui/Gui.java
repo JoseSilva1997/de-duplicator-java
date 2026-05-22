@@ -1,8 +1,13 @@
 package gui;
 
 import javax.swing.*;
+
+import backend.DeduplicationService;
+
 import java.awt.*;
-import java.io.File;
+import java.util.List;
+import java.io.IOException;
+import java.nio.file.Path;
 
 public class Gui extends JFrame {
 
@@ -10,6 +15,8 @@ public class Gui extends JFrame {
     private final FileCard attendeeCard;
     private final JButton processButton;
     private final JLabel statusLabel;
+
+    private final DeduplicationService service = new DeduplicationService();
 
     public Gui() {
         super("Excel Sheet Comparator");
@@ -19,14 +26,34 @@ public class Gui extends JFrame {
         setLocationRelativeTo(null);
         getContentPane().setBackground(Theme.BACKGROUND);
 
+        SheetSelector picker = file -> {
+            try {
+                List<String> sheets = service.listSheets(file.toPath());
+                if (sheets.isEmpty()) {
+                    showError("No usable sheets", new IllegalStateException("File contains no visible sheets."));
+                    return null;
+                }
+                if (sheets.size() == 1) {
+                    return sheets;   // single-sheet file: auto-select, no dialog
+                }
+                return SheetPickerDialog.show(this, "Select sheets in " + file.getName(), sheets);
+            } catch (IOException ex) {
+                showError("Could not read sheet list", ex);
+                return null;
+            }
+        };
+
         guestCard = new FileCard(
-                "Guest List",
-                "Upload your complete guest list",
-                this::updateProcessButton);
+            "Guest List",
+            "Upload your complete guest list",
+            picker,
+            this::updateProcessButton);
         attendeeCard = new FileCard(
-                "Attendee List",
-                "Upload your confirmed attendees list",
-                this::updateProcessButton);
+            "Attendee List",
+            "Upload your confirmed attendees list",
+            picker,
+            this::updateProcessButton);
+
 
         processButton = buildProcessButton();
         statusLabel = buildStatusLabel("Upload both files to begin processing");
@@ -110,14 +137,51 @@ public class Gui extends JFrame {
     }
 
     private void onRemoveDuplicates() {
-        File guest = guestCard.getFile();
-        File attendees = attendeeCard.getFile();
-        // Hand off to processing logic â€” wired up by App.
-        JOptionPane.showMessageDialog(this,
-                "Processing:\n" + guest.getName() + "\n" + attendees.getName(),
-                "Remove Duplicates",
-                JOptionPane.INFORMATION_MESSAGE);
+        Path primaryPath   = guestCard.getFile().toPath();
+        Path secondaryPath = attendeeCard.getFile().toPath();
+        List<String> primarySheets   = guestCard.getSelectedSheets();
+        List<String> secondarySheets = attendeeCard.getSelectedSheets();
+
+        processButton.setEnabled(false);
+        statusLabel.setText("Processing…");
+
+        SwingWorker<DeduplicationService.Summary, Void> worker = new SwingWorker<>() {
+            @Override
+            protected DeduplicationService.Summary doInBackground() throws Exception {
+                return service.run(primaryPath, primarySheets, secondaryPath, secondarySheets);
+            }
+            @Override
+            protected void done() {
+                try {
+                    showSummary(get());
+                } catch (Exception ex) {
+                    showError("Processing failed", ex.getCause() != null ? ex.getCause() : ex);
+                } finally {
+                    updateProcessButton();
+                }
+            }
+        };
+        worker.execute();
     }
+
+
+    private void showSummary(DeduplicationService.Summary s) {
+        JOptionPane.showMessageDialog(this,
+            "Processed " + s.sheetsProcessed() + " sheet(s)\n" +
+            "Kept:    " + s.totalKept() + "\n" +
+            "Removed: " + s.totalRemoved() + "\n\n" +
+            "Output saved to:\n" + s.outputDirectory(),
+            "Done",
+            JOptionPane.INFORMATION_MESSAGE);
+    }
+
+    private void showError(String title, Throwable t) {
+        JOptionPane.showMessageDialog(this,
+            title + ":\n" + t.getMessage(),
+            "Error",
+            JOptionPane.ERROR_MESSAGE);
+    }
+
 
     private static JPanel centered(JComponent component) {
         JPanel wrapper = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));

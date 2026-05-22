@@ -11,7 +11,7 @@ public enum ContactField {
     FIRST_NAME("First Name", List.of("firstname", "name")),
     LAST_NAME("Last Name", List.of("lastname", "lname", "surname")),
     FULL_NAME("Full Name", List.of("fullname")),
-    EMAIL("Email", List.of("email", "emailaddress")),
+    EMAIL("Email", List.of("email", "emailaddress", "emailenteremail")),
     COMPANY("Company", List.of("company", "organization", "companyname", "organisation")),
     JOB_TITLE("Job Title", List.of("jobtitle", "position", "job", "role"));
 
