@@ -50,20 +50,31 @@ public final class ExcelReader implements IFileReader {
     }
 
     private static SheetData readSheet(Sheet sheet) {
-        int headerRowIndex = findHeaderRowIndex(sheet);
-        if (headerRowIndex < 0) return new SheetData(List.of(), Collections.emptySet()); // No header row -> return empty list, not an error
-        Row headerRow = sheet.getRow(headerRowIndex);
-        if (headerRow == null) return new SheetData(List.of(), Collections.emptySet());
-
-        List<String> headerCells = new ArrayList<>();
-        for (int c = 0; c < headerRow.getLastCellNum(); c++) {
-            headerCells.add(cellString(headerRow.getCell(c)));
-        }
-        HeaderResolver resolver = new HeaderResolver(headerCells);
-        ContactRecordMapper mapper = new ContactRecordMapper(resolver);
-
-        List<ContactRecord> records = new ArrayList<>();
         int lastRow = sheet.getLastRowNum();
+
+        // Scan for the first row that BOTH has content AND parses as a header.
+        // Rows above the real header may be blank or contain a title/note that
+        // HeaderResolver rejects — skip those and keep looking.
+        HeaderResolver resolver = null;
+        int headerRowIndex = -1;
+        for (int r = 0; r <= lastRow; r++) {
+            Row row = sheet.getRow(r);
+            if (row == null) continue;
+            List<String> cells = readRowCells(row);
+            if (cells.stream().allMatch(s -> s == null || s.isBlank())) continue;
+            try {
+                resolver = new HeaderResolver(cells);
+                headerRowIndex = r;
+                break;
+            } catch (IllegalArgumentException ignored) {
+                // Not a header — try the next non-empty row.
+            }
+        }
+
+        if (resolver == null) return new SheetData(List.of(), Collections.emptySet());
+
+        ContactRecordMapper mapper = new ContactRecordMapper(resolver);
+        List<ContactRecord> records = new ArrayList<>();
         for (int r = headerRowIndex + 1; r <= lastRow; r++) {
             Row row = sheet.getRow(r);
             if (row == null) continue;
@@ -72,27 +83,18 @@ public final class ExcelReader implements IFileReader {
         }
         return new SheetData(records, resolver.availableFields());
     }
-    
-    private static String cellString(Cell cell) {
-        if (cell == null) return null;
-        return FORMATTER.formatCellValue(cell);  
+
+    private static List<String> readRowCells(Row row) {
+        List<String> cells = new ArrayList<>();
+        int lastCol = row.getLastCellNum();   // -1 for empty rows
+        for (int c = 0; c < lastCol; c++) {
+            cells.add(cellString(row.getCell(c)));
+        }
+        return cells;
     }
 
-    // Real-world spreadsheets sometimes have blank rows above the header (manual
-    // formatting, copy-paste artifacts). Scan down to the first row with any
-    // non-blank content and treat that as the header.
-    private static int findHeaderRowIndex(Sheet sheet) {
-        int lastRow = sheet.getLastRowNum();
-        for (int r = 0; r <= lastRow; r++) {
-            Row row = sheet.getRow(r);
-            if (row == null) continue;
-            for (Cell cell : row) {
-                String value = cellString(cell);
-                if (value != null && !value.isBlank()) {
-                    return r;
-                }
-            }
-        }
-        return -1; // No header row found
+    private static String cellString(Cell cell) {
+        if (cell == null) return null;
+        return FORMATTER.formatCellValue(cell);
     }
 }

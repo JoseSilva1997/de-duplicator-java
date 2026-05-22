@@ -38,16 +38,29 @@ public final class CsvReader implements IFileReader {
                     .parse(reader)) {
         
                 Iterator<CSVRecord> it = parser.iterator();
-                if (!it.hasNext()) return Map.of(sheetName, new SheetData(records, Collections.emptySet())); // Empty file -> return empty list, not an error
 
-                // First row = header
-                CSVRecord headerRow = it.next();
-                List<String> headerCells = new ArrayList<>();
-                for (String cell : headerRow) headerCells.add(cell);
+                // Scan for the first row that BOTH has content AND parses as a header.
+                // Rows above the real header may be blank (already filtered by
+                // setIgnoreEmptyLines) or contain a title/note that HeaderResolver rejects.
+                HeaderResolver resolver = null;
+                while (it.hasNext()) {
+                    CSVRecord candidate = it.next();
+                    List<String> headerCells = new ArrayList<>();
+                    for (String cell : candidate) headerCells.add(cell);
+                    if (headerCells.stream().allMatch(s -> s == null || s.isBlank())) continue;
+                    try {
+                        resolver = new HeaderResolver(headerCells);
+                        break;
+                    } catch (IllegalArgumentException ignored) {
+                        // Not a header — try the next row.
+                    }
+                }
 
-                // Create a resolver and mapper based on the header row
-                HeaderResolver resolver = new HeaderResolver(headerCells);
-                ContactRecordMapper recordMapper = new ContactRecordMapper(resolver);  
+                if (resolver == null) {
+                    return Map.of(sheetName, new SheetData(records, Collections.emptySet()));
+                }
+
+                ContactRecordMapper recordMapper = new ContactRecordMapper(resolver);
 
                 // Remaining rows = data
                 while (it.hasNext()) {

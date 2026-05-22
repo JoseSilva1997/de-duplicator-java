@@ -16,6 +16,7 @@ public class Gui extends JFrame {
     private final FileCard attendeeCard;
     private final JButton processButton;
     private final JLabel statusLabel;
+    private final JProgressBar progressBar;
 
     private final DeduplicationService service = new DeduplicationService();
 
@@ -60,10 +61,21 @@ public class Gui extends JFrame {
 
         processButton = buildProcessButton();
         statusLabel = buildStatusLabel("Upload both files to begin");
+        progressBar = buildProgressBar();
 
         layoutComponents();
         updateProcessButton();
         getRootPane().setDefaultButton(processButton);   // Enter key triggers it once enabled
+    }
+
+    private JProgressBar buildProgressBar() {
+        JProgressBar bar = new JProgressBar();
+        bar.setIndeterminate(true);
+        bar.setPreferredSize(new Dimension(280, 6));
+        bar.setMaximumSize(new Dimension(280, 6));
+        bar.setBorderPainted(false);
+        bar.setVisible(false);   // only shown while processing
+        return bar;
     }
 
     private void layoutComponents() {
@@ -78,6 +90,8 @@ public class Gui extends JFrame {
         root.add(Box.createVerticalStrut(32));
         root.add(centered(processButton));
         root.add(Box.createVerticalStrut(14));
+        root.add(centered(progressBar));
+        root.add(Box.createVerticalStrut(10));
         root.add(centered(statusLabel));
         root.add(Box.createVerticalGlue());
 
@@ -174,6 +188,7 @@ public class Gui extends JFrame {
         processButton.setBackground(Theme.PRIMARY_DISABLED);
         statusLabel.setText("Processing…");
         statusLabel.setForeground(Theme.TEXT_SECONDARY);
+        progressBar.setVisible(true);
 
         SwingWorker<DeduplicationService.Summary, Void> worker = new SwingWorker<>() {
             @Override
@@ -182,6 +197,7 @@ public class Gui extends JFrame {
             }
             @Override
             protected void done() {
+                progressBar.setVisible(false);
                 try {
                     showSummary(get());
                 } catch (Exception ex) {
