@@ -24,6 +24,14 @@ public final class DeduplicationService {
         return FileReaderFactory.forPath(file).listSheets(file);
     }
 
+    /** Reads the selected sheets and returns the total number of records across them. */
+    public int countRecords(Path file, List<String> sheetSelection) throws IOException {
+        Map<String, SheetData> sheets = FileReaderFactory.forPath(file).read(file, sheetSelection);
+        return sheets.values().stream()
+                .mapToInt(sd -> sd.records().size())
+                .sum();
+    }
+
     /** Read both files for the selected sheets, dedup per primary sheet, write outputs. */
     public Summary run(
             Path primaryPath,   List<String> primarySheetSelection,

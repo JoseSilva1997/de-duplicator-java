@@ -49,11 +49,13 @@ public class Gui extends JFrame {
             "Guest list",
             "Upload your complete guest list",
             picker,
+            service,
             this::updateProcessButton);
         attendeeCard = new FileCard(
             "Attendee list",
             "Upload your confirmed attendees list",
             picker,
+            service,
             this::updateProcessButton);
 
         processButton = buildProcessButton();
@@ -142,8 +144,24 @@ public class Gui extends JFrame {
         boolean ready = guestCard.hasFile() && attendeeCard.hasFile();
         processButton.setEnabled(ready);
         processButton.setBackground(ready ? Theme.PRIMARY : Theme.PRIMARY_DISABLED);
-        statusLabel.setText(ready ? "Ready to process" : "Upload both files to begin");
-        statusLabel.setForeground(ready ? Theme.SUCCESS : Theme.TEXT_SECONDARY);
+
+        if (!ready) {
+            statusLabel.setText("Upload both files to begin");
+            statusLabel.setForeground(Theme.TEXT_SECONDARY);
+            return;
+        }
+
+        int guests = guestCard.getRecordCount();
+        int attendees = attendeeCard.getRecordCount();
+        if (guests < 0 || attendees < 0) {
+            statusLabel.setText("Ready to process · counting rows…");
+        } else {
+            statusLabel.setText("Ready to process · "
+                + guests + (guests == 1 ? " guest" : " guests")
+                + " and "
+                + attendees + (attendees == 1 ? " attendee" : " attendees"));
+        }
+        statusLabel.setForeground(Theme.SUCCESS);
     }
 
     private void onRemoveDuplicates() {

@@ -1,5 +1,7 @@
 package gui;
 
+import backend.DeduplicationService;
+
 import javax.swing.*;
 import java.awt.*;
 import java.io.File;
@@ -13,13 +15,18 @@ class FileCard extends JPanel {
     private final JButton chooseButton;
     private final Runnable onChange;
     private final SheetSelector sheetSelector;
+    private final DeduplicationService service;
 
     private File selectedFile;
     private List<String> selectedSheets;
+    private int recordCount = -1;   // -1 = unknown / not yet computed
 
-    FileCard(String title, String description, SheetSelector sheetSelector, Runnable onChange) {
+    FileCard(String title, String description,
+             SheetSelector sheetSelector, DeduplicationService service,
+             Runnable onChange) {
         this.onChange = onChange;
         this.sheetSelector = sheetSelector;
+        this.service = service;
 
         // Transparent so paintComponent fully controls the rounded background.
         setOpaque(false);
@@ -52,7 +59,7 @@ class FileCard extends JPanel {
         statusRow.add(statusIcon);
         statusRow.add(statusLabel);
 
-        // Secondary detail line under the status — sheet count after selection.
+        // Secondary detail line under the status — sheet count + row count after selection.
         detailLabel = new JLabel(" ");
         detailLabel.setFont(Theme.FONT_REGULAR);
         detailLabel.setForeground(Theme.TEXT_MUTED);
@@ -116,23 +123,60 @@ class FileCard extends JPanel {
 
             selectedFile = chosen;
             selectedSheets = sheets;
+            recordCount = -1;             // unknown until the background read finishes
 
             statusIcon.setText("✓");
             statusIcon.setForeground(Theme.SUCCESS);
             statusLabel.setText(chosen.getName());
             statusLabel.setForeground(Theme.TEXT_PRIMARY);
-            detailLabel.setText(sheets.size() == 1
-                    ? "1 sheet selected"
-                    : sheets.size() + " sheets selected");
+            detailLabel.setText(formatSheetSummary(sheets.size(), -1));
             chooseButton.setText("Change file");
 
             repaint();          // border colour reflects selection
             onChange.run();
+            countRecordsAsync(chosen, sheets);
         }
+    }
+
+    /** Reads the selected sheets off the EDT to get the record count, then updates the UI. */
+    private void countRecordsAsync(File file, List<String> sheets) {
+        SwingWorker<Integer, Void> worker = new SwingWorker<>() {
+            @Override
+            protected Integer doInBackground() throws Exception {
+                return service.countRecords(file.toPath(), sheets);
+            }
+            @Override
+            protected void done() {
+                // Guard against stale callbacks if the user picks a different file
+                // before this one finishes counting.
+                if (!file.equals(selectedFile)) return;
+                try {
+                    recordCount = get();
+                    detailLabel.setText(formatSheetSummary(sheets.size(), recordCount));
+                } catch (Exception ex) {
+                    recordCount = -1;   // leave just the sheet count visible
+                } finally {
+                    onChange.run();     // tell Gui to refresh the global status line
+                }
+            }
+        };
+        worker.execute();
+    }
+
+    private static String formatSheetSummary(int sheetCount, int rowCount) {
+        String sheetPart = sheetCount == 1 ? "1 sheet" : sheetCount + " sheets";
+        if (rowCount < 0) return sheetPart + " selected";
+        String rowPart = rowCount == 1 ? "1 row" : rowCount + " rows";
+        return sheetPart + " · " + rowPart;
     }
 
     List<String> getSelectedSheets() {
         return selectedSheets;
+    }
+
+    /** Returns the record count if known, or -1 if not yet computed. */
+    int getRecordCount() {
+        return recordCount;
     }
 
     boolean hasFile() {
