@@ -58,7 +58,7 @@ public final class DedupOrchestrator {
             applied.add(strategy.name());
         }
 
-        return new DedupResult(candidates, removed, applied);
+        return new DedupResult(candidates, removed, applied, primary.availableFields());
     }
 
     public static List<DedupStrategy> defaultPipeline() {
