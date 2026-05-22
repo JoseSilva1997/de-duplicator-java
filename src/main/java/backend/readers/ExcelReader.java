@@ -10,8 +10,6 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.poi.ss.usermodel.*;
-
-import backend.model.ContactField;
 import backend.model.ContactRecord;
 
 public final class ExcelReader implements IFileReader {

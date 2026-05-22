@@ -1,6 +1,5 @@
 package backend.readers;
 
-import backend.model.ContactField;
 import backend.model.ContactRecord;
 
 import java.io.BufferedReader;
@@ -47,7 +46,7 @@ public final class CsvReader implements IFileReader {
                 // Create a resolver and mapper based on the header row
                 HeaderResolver resolver = new HeaderResolver(headerCells);
                 ContactRecordMapper recordMapper = new ContactRecordMapper(resolver);  
-                
+
                 // Remaining rows = data
                 while (it.hasNext()) {
                     CSVRecord row = it.next();
