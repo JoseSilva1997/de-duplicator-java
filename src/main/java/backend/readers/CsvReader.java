@@ -52,7 +52,7 @@ public final class CsvReader implements IFileReader {
                 // Remaining rows = data
                 while (it.hasNext()) {
                     CSVRecord row = it.next();
-                    ContactRecord record = recordMapper.map(row::get);
+                    ContactRecord record = recordMapper.map(idx -> idx < row.size() ? row.get(idx) : null);
                     if (record != null) records.add(record);
                 }
             return Map.of(sheetName, new SheetData(records, resolver.availableFields()));
