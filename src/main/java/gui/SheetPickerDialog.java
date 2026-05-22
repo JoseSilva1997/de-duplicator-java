@@ -13,31 +13,44 @@ public final class SheetPickerDialog {
         JDialog dialog = new JDialog(owner, title, Dialog.ModalityType.APPLICATION_MODAL);
         dialog.getContentPane().setBackground(Theme.BACKGROUND);
 
-        // Checkbox list, default all selected.
+        JLabel heading = new JLabel("Choose which sheets to include");
+        heading.setFont(new Font(Theme.FONT_FAMILY, Font.BOLD, 15));
+        heading.setForeground(Theme.TEXT_PRIMARY);
+        heading.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        JLabel hint = new JLabel("All sheets are selected by default.");
+        hint.setFont(Theme.FONT_REGULAR);
+        hint.setForeground(Theme.TEXT_SECONDARY);
+        hint.setAlignmentX(Component.LEFT_ALIGNMENT);
+        hint.setBorder(BorderFactory.createEmptyBorder(2, 0, 12, 0));
+
         List<JCheckBox> checkBoxes = new ArrayList<>(sheets.size());
         JPanel checkPanel = new JPanel();
-        checkPanel.setOpaque(false);
+        checkPanel.setBackground(Theme.CARD);
         checkPanel.setLayout(new BoxLayout(checkPanel, BoxLayout.Y_AXIS));
-        checkPanel.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
+        checkPanel.setBorder(BorderFactory.createEmptyBorder(10, 12, 10, 12));
         for (String sheet : sheets) {
             JCheckBox cb = new JCheckBox(sheet, true);
             cb.setOpaque(false);
-            cb.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+            cb.setFont(Theme.FONT_REGULAR);
             cb.setForeground(Theme.TEXT_PRIMARY);
+            cb.setFocusPainted(false);
+            cb.setAlignmentX(Component.LEFT_ALIGNMENT);
+            cb.setBorder(BorderFactory.createEmptyBorder(2, 0, 2, 0));
             checkBoxes.add(cb);
             checkPanel.add(cb);
         }
 
         JScrollPane scroll = new JScrollPane(checkPanel);
-        scroll.setBorder(BorderFactory.createLineBorder(Theme.CARD_BORDER));
-        scroll.setPreferredSize(new Dimension(380, 260));
+        scroll.setBorder(BorderFactory.createLineBorder(Theme.CARD_BORDER, 1, true));
+        scroll.setPreferredSize(new Dimension(420, 280));
         scroll.getViewport().setBackground(Theme.CARD);
+        scroll.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        // Action buttons.
-        JButton selectAll  = new JButton("Select All");
-        JButton selectNone = new JButton("Select None");
-        JButton ok         = new JButton("OK");
-        JButton cancel     = new JButton("Cancel");
+        JButton selectAll  = ghostButton("Select all");
+        JButton selectNone = ghostButton("Select none");
+        JButton ok         = primaryButton("OK");
+        JButton cancel     = ghostButton("Cancel");
 
         selectAll.addActionListener(e -> checkBoxes.forEach(cb -> cb.setSelected(true)));
         selectNone.addActionListener(e -> checkBoxes.forEach(cb -> cb.setSelected(false)));
@@ -47,28 +60,36 @@ public final class SheetPickerDialog {
         ok.addActionListener(e -> { confirmed[0] = true; dialog.dispose(); });
         cancel.addActionListener(e -> dialog.dispose());
 
-        // Layout.
-        JPanel selectionButtons = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        JPanel selectionButtons = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
         selectionButtons.setOpaque(false);
+        selectionButtons.setAlignmentX(Component.LEFT_ALIGNMENT);
         selectionButtons.add(selectAll);
         selectionButtons.add(selectNone);
 
         JPanel okCancelButtons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         okCancelButtons.setOpaque(false);
+        okCancelButtons.setAlignmentX(Component.LEFT_ALIGNMENT);
         okCancelButtons.add(cancel);
         okCancelButtons.add(ok);
 
+        JPanel buttonRow = new JPanel(new BorderLayout());
+        buttonRow.setOpaque(false);
+        buttonRow.setAlignmentX(Component.LEFT_ALIGNMENT);
+        buttonRow.setBorder(BorderFactory.createEmptyBorder(16, 0, 0, 0));
+        buttonRow.add(selectionButtons, BorderLayout.WEST);
+        buttonRow.add(okCancelButtons, BorderLayout.EAST);
+
         JPanel root = new JPanel();
-        root.setOpaque(false);
+        root.setBackground(Theme.BACKGROUND);
         root.setLayout(new BoxLayout(root, BoxLayout.Y_AXIS));
-        root.setBorder(BorderFactory.createEmptyBorder(18, 18, 18, 18));
+        root.setBorder(BorderFactory.createEmptyBorder(22, 24, 20, 24));
+        root.add(heading);
+        root.add(hint);
         root.add(scroll);
-        root.add(Box.createVerticalStrut(10));
-        root.add(selectionButtons);
-        root.add(Box.createVerticalStrut(6));
-        root.add(okCancelButtons);
+        root.add(buttonRow);
 
         dialog.add(root);
+        dialog.getRootPane().setDefaultButton(ok);
         dialog.pack();
         dialog.setLocationRelativeTo(owner);
         dialog.setVisible(true);   // blocks until dispose()
@@ -80,5 +101,25 @@ public final class SheetPickerDialog {
             if (checkBoxes.get(i).isSelected()) selected.add(sheets.get(i));
         }
         return selected.isEmpty() ? null : selected;
+    }
+
+    private static JButton primaryButton(String text) {
+        JButton b = new JButton(text);
+        b.setFont(Theme.FONT_BOLD);
+        b.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        b.putClientProperty("JButton.buttonType", "roundRect");
+        b.setBackground(Theme.PRIMARY);
+        b.setForeground(Color.WHITE);
+        b.setBorder(BorderFactory.createEmptyBorder(8, 22, 8, 22));
+        return b;
+    }
+
+    private static JButton ghostButton(String text) {
+        JButton b = new JButton(text);
+        b.setFont(Theme.FONT_MEDIUM);
+        b.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        b.putClientProperty("JButton.buttonType", "roundRect");
+        b.setBorder(BorderFactory.createEmptyBorder(8, 16, 8, 16));
+        return b;
     }
 }

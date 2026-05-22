@@ -7,54 +7,93 @@ import java.util.List;
 
 class FileCard extends JPanel {
 
+    private final JLabel statusIcon;
     private final JLabel statusLabel;
+    private final JLabel detailLabel;
+    private final JButton chooseButton;
     private final Runnable onChange;
-    private File selectedFile;
     private final SheetSelector sheetSelector;
-    private List<String> selectedSheets;
 
+    private File selectedFile;
+    private List<String> selectedSheets;
 
     FileCard(String title, String description, SheetSelector sheetSelector, Runnable onChange) {
         this.onChange = onChange;
         this.sheetSelector = sheetSelector;
 
-        setBackground(Theme.CARD);
-        setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(Theme.CARD_BORDER, 1, true),
-                BorderFactory.createEmptyBorder(20, 22, 22, 22)));
+        // Transparent so paintComponent fully controls the rounded background.
+        setOpaque(false);
+        setBorder(BorderFactory.createEmptyBorder(22, 24, 24, 24));
         setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
 
         JLabel titleLabel = new JLabel(title);
-        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        titleLabel.setFont(Theme.FONT_TITLE);
         titleLabel.setForeground(Theme.TEXT_PRIMARY);
         titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         JLabel descLabel = new JLabel(description);
-        descLabel.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        descLabel.setFont(Theme.FONT_REGULAR);
         descLabel.setForeground(Theme.TEXT_SECONDARY);
         descLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        descLabel.setBorder(BorderFactory.createEmptyBorder(8, 0, 12, 0));
+        descLabel.setBorder(BorderFactory.createEmptyBorder(6, 0, 18, 0));
+
+        // Status pill: icon + label horizontal row.
+        statusIcon = new JLabel("○");
+        statusIcon.setFont(new Font(Theme.FONT_FAMILY, Font.BOLD, 14));
+        statusIcon.setForeground(Theme.TEXT_MUTED);
 
         statusLabel = new JLabel("No file selected");
-        statusLabel.setFont(new Font("Segoe UI", Font.PLAIN, 13));
-        statusLabel.setForeground(Theme.DANGER);
-        statusLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        statusLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 14, 0));
+        statusLabel.setFont(Theme.FONT_MEDIUM);
+        statusLabel.setForeground(Theme.TEXT_SECONDARY);
 
-        JButton chooseButton = new JButton("Choose File");
-        chooseButton.setFont(new Font("Segoe UI", Font.BOLD, 13));
-        chooseButton.setBackground(Theme.PRIMARY);
-        chooseButton.setForeground(Color.WHITE);
-        chooseButton.setFocusPainted(false);
-        chooseButton.setBorder(BorderFactory.createEmptyBorder(10, 22, 10, 22));
+        JPanel statusRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        statusRow.setOpaque(false);
+        statusRow.setAlignmentX(Component.LEFT_ALIGNMENT);
+        statusRow.add(statusIcon);
+        statusRow.add(statusLabel);
+
+        // Secondary detail line under the status — sheet count after selection.
+        detailLabel = new JLabel(" ");
+        detailLabel.setFont(Theme.FONT_REGULAR);
+        detailLabel.setForeground(Theme.TEXT_MUTED);
+        detailLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        detailLabel.setBorder(BorderFactory.createEmptyBorder(4, 26, 14, 0));
+
+        chooseButton = new JButton("Choose file");
+        chooseButton.setFont(Theme.FONT_BOLD);
         chooseButton.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         chooseButton.setAlignmentX(Component.LEFT_ALIGNMENT);
+        chooseButton.setBackground(Theme.PRIMARY);
+        chooseButton.setForeground(Color.WHITE);
+        chooseButton.setBorder(BorderFactory.createEmptyBorder(12, 26, 12, 26));
         chooseButton.addActionListener(e -> openFileChooser());
 
         add(titleLabel);
         add(descLabel);
-        add(statusLabel);
+        add(statusRow);
+        add(detailLabel);
+        add(Box.createVerticalGlue());
         add(chooseButton);
+    }
+
+    @Override
+    protected void paintComponent(Graphics g) {
+        Graphics2D g2 = (Graphics2D) g.create();
+        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+        int w = getWidth();
+        int h = getHeight();
+        int arc = Theme.CARD_ARC;
+
+        g2.setColor(Theme.CARD);
+        g2.fillRoundRect(0, 0, w, h, arc, arc);
+
+        g2.setColor(hasFile() ? Theme.SUCCESS : Theme.CARD_BORDER);
+        g2.setStroke(new BasicStroke(hasFile() ? 1.4f : 1f));
+        g2.drawRoundRect(0, 0, w - 1, h - 1, arc, arc);
+
+        g2.dispose();
+        super.paintComponent(g);
     }
 
     private void openFileChooser() {
@@ -77,8 +116,17 @@ class FileCard extends JPanel {
 
             selectedFile = chosen;
             selectedSheets = sheets;
+
+            statusIcon.setText("✓");
+            statusIcon.setForeground(Theme.SUCCESS);
             statusLabel.setText(chosen.getName());
-            statusLabel.setForeground(Theme.SUCCESS);
+            statusLabel.setForeground(Theme.TEXT_PRIMARY);
+            detailLabel.setText(sheets.size() == 1
+                    ? "1 sheet selected"
+                    : sheets.size() + " sheets selected");
+            chooseButton.setText("Change file");
+
+            repaint();          // border colour reflects selection
             onChange.run();
         }
     }
@@ -95,4 +143,3 @@ class FileCard extends JPanel {
         return selectedFile;
     }
 }
-

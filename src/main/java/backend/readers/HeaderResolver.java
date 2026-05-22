@@ -44,7 +44,7 @@ public final class HeaderResolver {
 
         // No recognized fields found, likely a malformed header row.
         if (headerMap.isEmpty()) {
-            throw new IllegalArgumentException("No recognized contact fields found in header: " + headerCells);
+            throw new IllegalArgumentException("The header row does not contain any recogniseable contact fields.\nFound:\n" + headerCells + "\ninstead of:\nEmail, Name, First Name, Last Name, Company, etc.");
         }
 
         this.resolved = headerMap;

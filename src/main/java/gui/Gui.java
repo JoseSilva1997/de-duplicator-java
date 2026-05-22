@@ -1,13 +1,14 @@
 package gui;
 
 import javax.swing.*;
+import javax.swing.border.Border;
 
 import backend.DeduplicationService;
 
 import java.awt.*;
-import java.util.List;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.List;
 
 public class Gui extends JFrame {
 
@@ -22,7 +23,8 @@ public class Gui extends JFrame {
         super("Excel Sheet Comparator");
 
         setDefaultCloseOperation(EXIT_ON_CLOSE);
-        setSize(820, 700);
+        setSize(900, 640);
+        setMinimumSize(new Dimension(720, 520));
         setLocationRelativeTo(null);
         getContentPane().setBackground(Theme.BACKGROUND);
 
@@ -44,37 +46,38 @@ public class Gui extends JFrame {
         };
 
         guestCard = new FileCard(
-            "Guest List",
+            "Guest list",
             "Upload your complete guest list",
             picker,
             this::updateProcessButton);
         attendeeCard = new FileCard(
-            "Attendee List",
+            "Attendee list",
             "Upload your confirmed attendees list",
             picker,
             this::updateProcessButton);
 
-
         processButton = buildProcessButton();
-        statusLabel = buildStatusLabel("Upload both files to begin processing");
+        statusLabel = buildStatusLabel("Upload both files to begin");
 
         layoutComponents();
         updateProcessButton();
+        getRootPane().setDefaultButton(processButton);   // Enter key triggers it once enabled
     }
 
     private void layoutComponents() {
         JPanel root = new JPanel();
         root.setOpaque(false);
         root.setLayout(new BoxLayout(root, BoxLayout.Y_AXIS));
-        root.setBorder(BorderFactory.createEmptyBorder(30, 40, 30, 40));
+        root.setBorder(BorderFactory.createEmptyBorder(36, 48, 32, 48));
 
         root.add(buildHeader());
-        root.add(Box.createVerticalStrut(25));
+        root.add(Box.createVerticalStrut(28));
         root.add(buildCardsRow());
-        root.add(Box.createVerticalStrut(35));
+        root.add(Box.createVerticalStrut(32));
         root.add(centered(processButton));
-        root.add(Box.createVerticalStrut(15));
+        root.add(Box.createVerticalStrut(14));
         root.add(centered(statusLabel));
+        root.add(Box.createVerticalGlue());
 
         add(root);
     }
@@ -85,23 +88,30 @@ public class Gui extends JFrame {
         header.setLayout(new BoxLayout(header, BoxLayout.Y_AXIS));
 
         JLabel title = new JLabel("Excel Sheet Comparator");
-        title.setFont(new Font("Segoe UI", Font.BOLD, 28));
+        title.setFont(Theme.FONT_DISPLAY);
         title.setForeground(Theme.TEXT_PRIMARY);
         title.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         JLabel subtitle = new JLabel("Remove duplicate attendees from your guest list");
-        subtitle.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        subtitle.setFont(new Font(Theme.FONT_FAMILY, Font.PLAIN, 14));
         subtitle.setForeground(Theme.TEXT_SECONDARY);
         subtitle.setAlignmentX(Component.CENTER_ALIGNMENT);
-        subtitle.setBorder(BorderFactory.createEmptyBorder(8, 0, 0, 0));
+        subtitle.setBorder(BorderFactory.createEmptyBorder(6, 0, 14, 0));
+
+        JPanel accent = new JPanel();
+        accent.setBackground(Theme.PRIMARY);
+        accent.setMaximumSize(new Dimension(56, 3));
+        accent.setPreferredSize(new Dimension(56, 3));
+        accent.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         header.add(title);
         header.add(subtitle);
+        header.add(accent);
         return header;
     }
 
     private JPanel buildCardsRow() {
-        JPanel row = new JPanel(new GridLayout(1, 2, 20, 0));
+        JPanel row = new JPanel(new GridLayout(1, 2, 22, 0));
         row.setOpaque(false);
         row.add(guestCard);
         row.add(attendeeCard);
@@ -109,20 +119,21 @@ public class Gui extends JFrame {
     }
 
     private JButton buildProcessButton() {
-        JButton button = new JButton("Remove Duplicates");
-        button.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        JButton button = new JButton("Remove duplicates");
+        button.setFont(new Font(Theme.FONT_FAMILY, Font.BOLD, 14));
+        button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        button.putClientProperty("JButton.buttonType", "roundRect");
         button.setBackground(Theme.PRIMARY);
         button.setForeground(Color.WHITE);
-        button.setFocusPainted(false);
-        button.setBorder(BorderFactory.createEmptyBorder(14, 50, 14, 50));
-        button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        Border padding = BorderFactory.createEmptyBorder(12, 36, 12, 36);
+        button.setBorder(padding);
         button.addActionListener(e -> onRemoveDuplicates());
         return button;
     }
 
     private JLabel buildStatusLabel(String text) {
         JLabel label = new JLabel(text);
-        label.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        label.setFont(new Font(Theme.FONT_FAMILY, Font.PLAIN, 13));
         label.setForeground(Theme.TEXT_SECONDARY);
         return label;
     }
@@ -131,9 +142,8 @@ public class Gui extends JFrame {
         boolean ready = guestCard.hasFile() && attendeeCard.hasFile();
         processButton.setEnabled(ready);
         processButton.setBackground(ready ? Theme.PRIMARY : Theme.PRIMARY_DISABLED);
-        statusLabel.setText(ready
-                ? "Ready to process"
-                : "Upload both files to begin processing");
+        statusLabel.setText(ready ? "Ready to process" : "Upload both files to begin");
+        statusLabel.setForeground(ready ? Theme.SUCCESS : Theme.TEXT_SECONDARY);
     }
 
     private void onRemoveDuplicates() {
@@ -143,7 +153,9 @@ public class Gui extends JFrame {
         List<String> secondarySheets = attendeeCard.getSelectedSheets();
 
         processButton.setEnabled(false);
+        processButton.setBackground(Theme.PRIMARY_DISABLED);
         statusLabel.setText("Processing…");
+        statusLabel.setForeground(Theme.TEXT_SECONDARY);
 
         SwingWorker<DeduplicationService.Summary, Void> worker = new SwingWorker<>() {
             @Override
@@ -164,7 +176,6 @@ public class Gui extends JFrame {
         worker.execute();
     }
 
-
     private void showSummary(DeduplicationService.Summary s) {
         JOptionPane.showMessageDialog(this,
             "Processed " + s.sheetsProcessed() + " sheet(s)\n" +
@@ -182,7 +193,6 @@ public class Gui extends JFrame {
             JOptionPane.ERROR_MESSAGE);
     }
 
-
     private static JPanel centered(JComponent component) {
         JPanel wrapper = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
         wrapper.setOpaque(false);
@@ -194,4 +204,3 @@ public class Gui extends JFrame {
         SwingUtilities.invokeLater(() -> new Gui().setVisible(true));
     }
 }
-
