@@ -3,7 +3,7 @@ package backend.readers;
 import java.util.List;
 import java.util.Map;
 
-import backend.model.ContactRecord;
+import backend.model.SheetData;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -26,6 +26,6 @@ public interface IFileReader {
      * @return a map of sheet names to lists of contact records.
      * @throws IOException if an I/O error occurs reading from the file or a malformed input is encountered.
      */
-    Map<String, List<ContactRecord>> read(Path filePath, List<String> sheetNames) throws IOException;
+    Map<String, SheetData> read(Path filePath, List<String> sheetNames) throws IOException;
 }
 

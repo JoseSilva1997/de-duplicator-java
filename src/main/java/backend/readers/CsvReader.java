@@ -1,12 +1,14 @@
 package backend.readers;
 
 import backend.model.ContactRecord;
+import backend.model.SheetData;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -24,7 +26,7 @@ public final class CsvReader implements IFileReader {
     }
 
     @Override
-    public Map<String, List<ContactRecord>> read(Path filePath, List<String> sheetNames) throws IOException {
+    public Map<String, SheetData> read(Path filePath, List<String> sheetNames) throws IOException {
         String sheetName = syntheticSheetName(filePath);
 
         List<ContactRecord> records = new ArrayList<>();
@@ -36,7 +38,7 @@ public final class CsvReader implements IFileReader {
                     .parse(reader)) {
         
                 Iterator<CSVRecord> it = parser.iterator();
-                if (!it.hasNext()) return Map.of(sheetName, records); // Empty file -> return empty list, not an error
+                if (!it.hasNext()) return Map.of(sheetName, new SheetData(records, Collections.emptySet())); // Empty file -> return empty list, not an error
 
                 // First row = header
                 CSVRecord headerRow = it.next();
@@ -53,8 +55,8 @@ public final class CsvReader implements IFileReader {
                     ContactRecord record = recordMapper.map(row::get);
                     if (record != null) records.add(record);
                 }
+            return Map.of(sheetName, new SheetData(records, resolver.availableFields()));
         }
-        return Map.of(sheetName, records);
     }
 
     // Helper method to generate a synthetic sheet name from the file name (without extension).

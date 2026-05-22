@@ -5,12 +5,14 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.apache.poi.ss.usermodel.*;
 import backend.model.ContactRecord;
+import backend.model.SheetData;
 
 public final class ExcelReader implements IFileReader {
 
@@ -29,8 +31,8 @@ public final class ExcelReader implements IFileReader {
     }
 
     @Override
-    public Map<String, List<ContactRecord>> read(Path filePath, List<String> sheetNames) throws IOException {
-        Map<String, List<ContactRecord>> result = new LinkedHashMap<>();
+    public Map<String, SheetData> read(Path filePath, List<String> sheetNames) throws IOException {
+        Map<String, SheetData> result = new LinkedHashMap<>();
 
         try (InputStream input = Files.newInputStream(filePath);
             Workbook workbook = WorkbookFactory.create(input)) {
@@ -45,11 +47,11 @@ public final class ExcelReader implements IFileReader {
         return result;
     }
 
-    private static List<ContactRecord> readSheet(Sheet sheet) {
+    private static SheetData readSheet(Sheet sheet) {
         int headerRowIndex = findHeaderRowIndex(sheet);
-        if (headerRowIndex < 0) return List.of(); // No header row -> return empty list, not an error
+        if (headerRowIndex < 0) return new SheetData(List.of(), Collections.emptySet()); // No header row -> return empty list, not an error
         Row headerRow = sheet.getRow(headerRowIndex);
-        if (headerRow == null) return List.of();
+        if (headerRow == null) return new SheetData(List.of(), Collections.emptySet());
 
         List<String> headerCells = new ArrayList<>();
         for (int c = 0; c < headerRow.getLastCellNum(); c++) {
@@ -66,7 +68,7 @@ public final class ExcelReader implements IFileReader {
             ContactRecord record = mapper.map(idx -> cellString(row.getCell(idx)));
             if (record != null) records.add(record);
         }
-        return records;
+        return new SheetData(records, resolver.availableFields());
     }
     
     private static String cellString(Cell cell) {

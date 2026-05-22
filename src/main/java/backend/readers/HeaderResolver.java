@@ -1,9 +1,12 @@
 package backend.readers;
 
 import backend.model.ContactField;
+
+import java.util.Collections;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Resolves header cells to standard contact fields using normalization and alias matching.
@@ -48,6 +51,10 @@ public final class HeaderResolver {
 
     public boolean hasField(ContactField field) {
         return resolved.containsKey(field);
+    }
+
+    public Set<ContactField> availableFields() {
+        return Collections.unmodifiableSet(resolved.keySet());
     }
 
     private static String normalize(String headerCell) {
