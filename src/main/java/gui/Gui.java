@@ -211,13 +211,35 @@ public class Gui extends JFrame {
     }
 
     private void showSummary(DeduplicationService.Summary s) {
-        JOptionPane.showMessageDialog(this,
-            "Processed " + s.sheetsProcessed() + " sheet(s)\n" +
-            "Kept:    " + s.totalKept() + "\n" +
-            "Removed: " + s.totalRemoved() + "\n\n" +
-            "Output saved to:\n" + s.outputDirectory(),
-            "Done",
-            JOptionPane.INFORMATION_MESSAGE);
+        JPanel panel = new JPanel();
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        panel.setOpaque(false);
+
+        panel.add(summaryLine("Processed " + s.sheetsProcessed() + " sheet(s)"));
+        panel.add(summaryLine("Kept:    " + s.totalKept()));
+        panel.add(summaryLine("Removed: " + s.totalRemoved()));
+        panel.add(Box.createVerticalStrut(12));
+        panel.add(summaryLine("Output saved to:"));
+
+        // JTextArea wraps long paths (no spaces) at character boundaries; JLabel can't.
+        JTextArea pathArea = new JTextArea(s.outputDirectory().toString());
+        pathArea.setLineWrap(true);
+        pathArea.setWrapStyleWord(false);
+        pathArea.setEditable(false);
+        pathArea.setOpaque(false);
+        pathArea.setBorder(null);
+        pathArea.setFont(UIManager.getFont("Label.font"));
+        pathArea.setColumns(30);   // bounds the dialog width; text wraps inside it
+        pathArea.setAlignmentX(Component.LEFT_ALIGNMENT);
+        panel.add(pathArea);
+
+        JOptionPane.showMessageDialog(this, panel, "Done", JOptionPane.INFORMATION_MESSAGE);
+    }
+
+    private static JLabel summaryLine(String text) {
+        JLabel label = new JLabel(text);
+        label.setAlignmentX(Component.LEFT_ALIGNMENT);
+        return label;
     }
 
     private void showError(String title, Throwable t) {
