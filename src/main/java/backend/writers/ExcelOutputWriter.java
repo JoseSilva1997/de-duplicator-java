@@ -9,8 +9,10 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -20,11 +22,11 @@ import java.util.Set;
 public final class ExcelOutputWriter {
 
     public void write(Path primaryInputPath, Map<String, DedupResult> results) throws IOException {
-        Path parent = primaryInputPath.getParent();
+        Path outputDir = resolveOutputDir();
         String base = stripExtension(primaryInputPath.getFileName().toString());
 
-        Path keptPath = parent.resolve("Updated guests list from " + base + ".xlsx");
-        Path removedPath = parent.resolve("People removed from " + base + ".xlsx");
+        Path keptPath = outputDir.resolve("Updated guests list from " + base + ".xlsx");
+        Path removedPath = outputDir.resolve("People removed from " + base + ".xlsx");
 
         writeKept(keptPath, results);
         writeRemoved(removedPath, results);
@@ -147,6 +149,23 @@ public final class ExcelOutputWriter {
     // throw at sheet creation — deal with it if it ever happens.
     private static String safeSheetName(String name) {
         return name.length() > 31 ? name.substring(0, 31) : name;
+    }
+
+    // In production (packaged jar) outputs go next to the jar. In development
+    // (running from target/classes via IDE or `mvn exec:java`) they go to the
+    // project's /outputs folder so the build tree stays clean.
+    private static Path resolveOutputDir() {
+        try {
+            Path codeSource = Paths.get(
+                ExcelOutputWriter.class.getProtectionDomain().getCodeSource().getLocation().toURI()
+            );
+            if (Files.isDirectory(codeSource)) {
+                return Paths.get("").toAbsolutePath().resolve("outputs");
+            }
+            return codeSource.getParent();
+        } catch (URISyntaxException | NullPointerException e) {
+            return Paths.get("").toAbsolutePath().resolve("outputs");
+        }
     }
 
     private static String stripExtension(String filename) {
