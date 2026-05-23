@@ -4,8 +4,12 @@ import javax.swing.*;
 import javax.swing.border.Border;
 
 import backend.DeduplicationService;
+import org.kordamp.ikonli.materialdesign2.MaterialDesignC;
+import org.kordamp.ikonli.swing.FontIcon;
 
 import java.awt.*;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
@@ -17,11 +21,13 @@ public class Gui extends JFrame {
     private final JButton processButton;
     private final JLabel statusLabel;
     private final JProgressBar progressBar;
+    private final SidePanel sidePanel = new SidePanel();
+    private JLayeredPane layeredPane;
 
     private final DeduplicationService service = new DeduplicationService();
 
     public Gui() {
-        super("Excel Sheet Comparator");
+        super("Guest List Cleaner");
 
         setDefaultCloseOperation(EXIT_ON_CLOSE);
         setSize(900, 640);
@@ -84,6 +90,7 @@ public class Gui extends JFrame {
         root.setLayout(new BoxLayout(root, BoxLayout.Y_AXIS));
         root.setBorder(BorderFactory.createEmptyBorder(36, 48, 32, 48));
 
+        root.add(buildTopBar());
         root.add(buildHeader());
         root.add(Box.createVerticalStrut(28));
         root.add(buildCardsRow());
@@ -95,7 +102,56 @@ public class Gui extends JFrame {
         root.add(centered(statusLabel));
         root.add(Box.createVerticalGlue());
 
-        add(root);
+        // Layered pane lets the SidePanel float above the main content without
+        // reflowing it. Main UI sits at DEFAULT_LAYER, the panel at PALETTE_LAYER.
+        layeredPane = new JLayeredPane();
+        layeredPane.setLayout(null);
+
+        JPanel rootHost = new JPanel(new BorderLayout());
+        rootHost.setOpaque(true);
+        rootHost.setBackground(Theme.BACKGROUND);
+        rootHost.add(root, BorderLayout.CENTER);
+
+        layeredPane.add(rootHost, JLayeredPane.DEFAULT_LAYER);
+        layeredPane.add(sidePanel.getScrim(), JLayeredPane.PALETTE_LAYER);
+        layeredPane.add(sidePanel, JLayeredPane.MODAL_LAYER);
+        sidePanel.setVisible(false);
+
+        layeredPane.addComponentListener(new ComponentAdapter() {
+            @Override
+            public void componentResized(ComponentEvent e) {
+                int w = layeredPane.getWidth();
+                int h = layeredPane.getHeight();
+                rootHost.setBounds(0, 0, w, h);
+                sidePanel.resyncBounds(w, h);
+                // Null-layout parents don't propagate validation on setBounds,
+                // so the main content stays at its old size until something else
+                // triggers a re-layout. Force it here.
+                rootHost.revalidate();
+                rootHost.repaint();
+            }
+        });
+
+        setContentPane(layeredPane);
+    }
+
+    private JPanel buildTopBar() {
+        JPanel bar = new JPanel(new BorderLayout());
+        bar.setOpaque(false);
+        bar.setAlignmentX(Component.CENTER_ALIGNMENT);
+        bar.setMaximumSize(new Dimension(Integer.MAX_VALUE, 28));
+
+        JButton settings = new JButton(
+            FontIcon.of(MaterialDesignC.COG_OUTLINE, 20, Theme.TEXT_SECONDARY));
+        settings.setBorder(BorderFactory.createEmptyBorder(4, 6, 4, 6));
+        settings.setContentAreaFilled(false);
+        settings.setFocusPainted(false);
+        settings.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        settings.setToolTipText("Settings and how it works");
+        settings.addActionListener(e -> sidePanel.setOpen(!sidePanel.isOpen()));
+
+        bar.add(settings, BorderLayout.EAST);
+        return bar;
     }
 
     private JPanel buildHeader() {
@@ -103,12 +159,12 @@ public class Gui extends JFrame {
         header.setOpaque(false);
         header.setLayout(new BoxLayout(header, BoxLayout.Y_AXIS));
 
-        JLabel title = new JLabel("Excel Sheet Comparator");
+        JLabel title = new JLabel("Guest List Cleaner");
         title.setFont(Theme.FONT_DISPLAY);
         title.setForeground(Theme.TEXT_PRIMARY);
         title.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        JLabel subtitle = new JLabel("Remove duplicate attendees from your guest list");
+        JLabel subtitle = new JLabel("Deduplicate your guest list against confirmed attendees");
         subtitle.setFont(new Font(Theme.FONT_FAMILY, Font.PLAIN, 14));
         subtitle.setForeground(Theme.TEXT_SECONDARY);
         subtitle.setAlignmentX(Component.CENTER_ALIGNMENT);
