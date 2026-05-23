@@ -107,10 +107,12 @@ public final class SheetPickerDialog {
         JButton b = new JButton(text);
         b.setFont(Theme.FONT_BOLD);
         b.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        b.putClientProperty("JButton.buttonType", "roundRect");
+        // FlatLaf.style: setBorder otherwise forces a plain-painting fallback
+        // that ignores JButton.arc. Same trick used on the main process button.
+        b.putClientProperty("FlatLaf.style",
+            "arc: 16; margin: 8,22,8,22; foreground: #FFFFFF;");
         b.setBackground(Theme.PRIMARY);
         b.setForeground(Color.WHITE);
-        b.setBorder(BorderFactory.createEmptyBorder(8, 22, 8, 22));
         return b;
     }
 
@@ -118,8 +120,9 @@ public final class SheetPickerDialog {
         JButton b = new JButton(text);
         b.setFont(Theme.FONT_MEDIUM);
         b.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        b.putClientProperty("JButton.buttonType", "roundRect");
-        b.setBorder(BorderFactory.createEmptyBorder(8, 16, 8, 16));
+        b.putClientProperty("FlatLaf.style", "arc: 16; margin: 8,16,8,16;");
+        b.setBackground(Theme.NEUTRAL_BG);
+        b.setForeground(Theme.TEXT_PRIMARY);
         return b;
     }
 }

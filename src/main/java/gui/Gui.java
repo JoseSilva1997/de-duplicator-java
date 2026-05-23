@@ -1,11 +1,10 @@
 package gui;
 
 import javax.swing.*;
-import javax.swing.border.Border;
 
 import backend.DeduplicationService;
 import backend.UserSettings;
-import org.kordamp.ikonli.materialdesign2.MaterialDesignC;
+import org.kordamp.ikonli.bootstrapicons.BootstrapIcons;
 import org.kordamp.ikonli.swing.FontIcon;
 
 import java.awt.*;
@@ -143,7 +142,7 @@ public class Gui extends JFrame {
         bar.setMaximumSize(new Dimension(Integer.MAX_VALUE, 28));
 
         JButton settings = new JButton(
-            FontIcon.of(MaterialDesignC.COG_OUTLINE, 20, Theme.TEXT_SECONDARY));
+            FontIcon.of(BootstrapIcons.GEAR, 20, Theme.TEXT_SECONDARY));
         settings.setBorder(BorderFactory.createEmptyBorder(4, 6, 4, 6));
         settings.setContentAreaFilled(false);
         settings.setFocusPainted(false);
@@ -195,11 +194,15 @@ public class Gui extends JFrame {
         JButton button = new JButton("Remove duplicates");
         button.setFont(new Font(Theme.FONT_FAMILY, Font.BOLD, 14));
         button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        button.putClientProperty("JButton.buttonType", "roundRect");
+        // FlatLaf.style is the reliable inline-styling hook for arc + padding on
+        // a single button; setBorder/JButton.arc were being ignored because the
+        // custom EmptyBorder forced FlatLaf into a plain-painting fallback.
+        // setBackground/setForeground continue to work, so the disabled-state
+        // colour swap in updateProcessButton stays unchanged.
+        button.putClientProperty("FlatLaf.style",
+            "arc: 16; margin: 12,36,12,36; foreground: #FFFFFF;");
         button.setBackground(Theme.PRIMARY);
         button.setForeground(Color.WHITE);
-        Border padding = BorderFactory.createEmptyBorder(12, 36, 12, 36);
-        button.setBorder(padding);
         button.addActionListener(e -> onRemoveDuplicates());
         return button;
     }

@@ -2,25 +2,36 @@ package gui;
 
 import backend.DeduplicationService;
 
-import org.kordamp.ikonli.materialdesign2.MaterialDesignC;
+import org.kordamp.ikonli.bootstrapicons.BootstrapIcons;
 import org.kordamp.ikonli.swing.FontIcon;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.datatransfer.DataFlavor;
+import java.awt.dnd.DnDConstants;
+import java.awt.dnd.DropTarget;
+import java.awt.dnd.DropTargetDragEvent;
+import java.awt.dnd.DropTargetDropEvent;
+import java.awt.dnd.DropTargetEvent;
+import java.awt.dnd.DropTargetListener;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
 import java.io.File;
 import java.util.List;
 
 class FileCard extends JPanel {
 
-    private static final Icon ICON_EMPTY   = FontIcon.of(MaterialDesignC.CIRCLE_OUTLINE, 16, Theme.TEXT_MUTED);
-    private static final Icon ICON_CHECKED = FontIcon.of(MaterialDesignC.CHECK_CIRCLE,   16, Theme.SUCCESS);
+    private static final int BIG_ICON_SIZE = 40;
+    private static final Icon ICON_EMPTY   = FontIcon.of(BootstrapIcons.DOWNLOAD,     BIG_ICON_SIZE, Theme.TEXT_MUTED);
+    private static final Icon ICON_HOVER   = FontIcon.of(BootstrapIcons.DOWNLOAD,     BIG_ICON_SIZE, Theme.PRIMARY);
+    private static final Icon ICON_LOADED  = FontIcon.of(BootstrapIcons.CHECK_CIRCLE, BIG_ICON_SIZE, Theme.SUCCESS);
 
-    private final JLabel statusIcon;
-    private final JLabel statusLabel;
-    private final JLabel detailLabel;
-    private final JButton chooseButton;
+    private final JLabel iconLabel;
+    private final JLabel mainLabel;     // filename when loaded, hint text when empty
+    private final JLabel detailLabel;   // sheets/rows when loaded, "Click to change" hint when loaded
     private final Runnable onChange;
     private final SheetSelector sheetSelector;
     private final DeduplicationService service;
@@ -28,7 +39,9 @@ class FileCard extends JPanel {
     private File selectedFile;
     private List<String> selectedSheets;
     private int recordCount = -1;   // -1 = unknown / not yet computed
-    private String fullFileName = "";   // the un-truncated name, for tooltip + re-truncation on resize
+    private String fullFileName = "";   // un-truncated name, for tooltip + re-truncation on resize
+    private boolean dragHover = false;
+    private boolean mouseHover = false;
 
     FileCard(String title, String description,
              SheetSelector sheetSelector, DeduplicationService service,
@@ -37,57 +50,45 @@ class FileCard extends JPanel {
         this.sheetSelector = sheetSelector;
         this.service = service;
 
-        // Transparent so paintComponent fully controls the rounded background.
+        // Transparent so paintComponent fully controls the rounded background + dashed border.
         setOpaque(false);
         setBorder(BorderFactory.createEmptyBorder(22, 24, 24, 24));
         setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
+        setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
 
         JLabel titleLabel = new JLabel(title);
         titleLabel.setFont(Theme.FONT_TITLE);
         titleLabel.setForeground(Theme.TEXT_PRIMARY);
-        titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         JLabel descLabel = new JLabel(description);
         descLabel.setFont(Theme.FONT_REGULAR);
         descLabel.setForeground(Theme.TEXT_SECONDARY);
-        descLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        descLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         descLabel.setBorder(BorderFactory.createEmptyBorder(6, 0, 18, 0));
 
-        // Status pill: icon + label horizontal row.
-        statusIcon = new JLabel(ICON_EMPTY);
+        iconLabel = new JLabel(ICON_EMPTY);
+        iconLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        iconLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 12, 0));
 
-        statusLabel = new JLabel("No file selected");
-        statusLabel.setFont(Theme.FONT_MEDIUM);
-        statusLabel.setForeground(Theme.TEXT_SECONDARY);
+        mainLabel = new JLabel("Choose a file or drag it here");
+        mainLabel.setFont(Theme.FONT_MEDIUM);
+        mainLabel.setForeground(Theme.TEXT_SECONDARY);
+        mainLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        JPanel statusRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
-        statusRow.setOpaque(false);
-        statusRow.setAlignmentX(Component.LEFT_ALIGNMENT);
-        statusRow.add(statusIcon);
-        statusRow.add(statusLabel);
-
-        // Secondary detail line under the status — sheet count + row count after selection.
         detailLabel = new JLabel(" ");
         detailLabel.setFont(Theme.FONT_REGULAR);
         detailLabel.setForeground(Theme.TEXT_MUTED);
-        detailLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        detailLabel.setBorder(BorderFactory.createEmptyBorder(4, 26, 14, 0));
-
-        chooseButton = new JButton("Choose file");
-        chooseButton.setFont(Theme.FONT_BOLD);
-        chooseButton.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        chooseButton.setAlignmentX(Component.LEFT_ALIGNMENT);
-        chooseButton.setBackground(Theme.PRIMARY);
-        chooseButton.setForeground(Color.WHITE);
-        chooseButton.setBorder(BorderFactory.createEmptyBorder(12, 26, 12, 26));
-        chooseButton.addActionListener(e -> openFileChooser());
+        detailLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        detailLabel.setBorder(BorderFactory.createEmptyBorder(6, 0, 0, 0));
 
         add(titleLabel);
         add(descLabel);
-        add(statusRow);
+        add(Box.createVerticalGlue());
+        add(iconLabel);
+        add(mainLabel);
         add(detailLabel);
         add(Box.createVerticalGlue());
-        add(chooseButton);
 
         // Re-truncate the filename whenever the card is resized.
         addComponentListener(new ComponentAdapter() {
@@ -95,6 +96,117 @@ class FileCard extends JPanel {
                 updateFilenameDisplay();
             }
         });
+
+        installClickHandler();
+        installDropTarget();
+    }
+
+    /**
+     * Attaches click + hover handlers to the card and every child. Swing doesn't
+     * bubble mouse events to parents, so each child needs its own listener. On
+     * mouseExited we re-test whether the pointer is still inside the card's
+     * bounds, otherwise crossing onto a child would briefly drop the hover state.
+     */
+    private void installClickHandler() {
+        MouseListener handler = new MouseAdapter() {
+            @Override public void mouseClicked(MouseEvent e) { openFileChooser(); }
+            @Override public void mouseEntered(MouseEvent e) { setMouseHover(true); }
+            @Override public void mouseExited(MouseEvent e) {
+                Point p = MouseInfo.getPointerInfo().getLocation();
+                SwingUtilities.convertPointFromScreen(p, FileCard.this);
+                if (!FileCard.this.contains(p)) setMouseHover(false);
+            }
+        };
+        attachRecursively(this, handler);
+    }
+
+    private void setMouseHover(boolean on) {
+        if (mouseHover == on) return;
+        mouseHover = on;
+        repaint();
+    }
+
+    private static void attachRecursively(Component c, MouseListener listener) {
+        c.addMouseListener(listener);
+        if (c instanceof Container container) {
+            for (Component child : container.getComponents()) {
+                attachRecursively(child, listener);
+            }
+        }
+    }
+
+    /**
+     * Accepts files dropped from the OS. We only ever take the first file in the
+     * drop list, even if the user drags multiple. dragEnter/dragExit toggle a
+     * hover flag that paintComponent uses to highlight the card border.
+     */
+    private void installDropTarget() {
+        new DropTarget(this, DnDConstants.ACTION_COPY, new DropTargetListener() {
+            @Override public void dragEnter(DropTargetDragEvent e) {
+                if (e.isDataFlavorSupported(DataFlavor.javaFileListFlavor)) {
+                    e.acceptDrag(DnDConstants.ACTION_COPY);
+                    setDragHover(true);
+                } else {
+                    e.rejectDrag();
+                }
+            }
+            @Override public void dragOver(DropTargetDragEvent e) {}
+            @Override public void dropActionChanged(DropTargetDragEvent e) {}
+            @Override public void dragExit(DropTargetEvent e) {
+                setDragHover(false);
+            }
+            @Override
+            public void drop(DropTargetDropEvent e) {
+                setDragHover(false);
+                if (!e.isDataFlavorSupported(DataFlavor.javaFileListFlavor)) {
+                    e.rejectDrop();
+                    return;
+                }
+                e.acceptDrop(DnDConstants.ACTION_COPY);
+                try {
+                    Object data = e.getTransferable().getTransferData(DataFlavor.javaFileListFlavor);
+                    if (data instanceof List<?> list && !list.isEmpty() && list.get(0) instanceof File f) {
+                        if (isAcceptedFile(f)) {
+                            acceptFile(f);
+                        } else {
+                            showUnsupportedFileError(f);
+                        }
+                    }
+                    e.dropComplete(true);
+                } catch (Exception ex) {
+                    e.dropComplete(false);
+                }
+            }
+        }, true);
+    }
+
+    private void setDragHover(boolean on) {
+        if (dragHover == on) return;
+        dragHover = on;
+        if (!hasFile()) {
+            iconLabel.setIcon(on ? ICON_HOVER : ICON_EMPTY);
+            mainLabel.setForeground(on ? Theme.PRIMARY : Theme.TEXT_SECONDARY);
+        }
+        repaint();
+    }
+
+    private static boolean isAcceptedFile(File f) {
+        String n = f.getName().toLowerCase();
+        return f.isFile() && (n.endsWith(".xlsx") || n.endsWith(".xls") || n.endsWith(".csv"));
+    }
+
+    private void showUnsupportedFileError(File f) {
+        String name = f.getName();
+        int dot = name.lastIndexOf('.');
+        String typeDescription = (dot > 0 && dot < name.length() - 1)
+            ? "is a " + name.substring(dot) + " file"
+            : "is not a supported file type";
+        JOptionPane.showMessageDialog(
+            this,
+            "\"" + name + "\" " + typeDescription + ".\n"
+                + "Please drop an Excel or CSV file (.xlsx, .xls, or .csv).",
+            "Unsupported file",
+            JOptionPane.ERROR_MESSAGE);
     }
 
     @Override
@@ -106,11 +218,34 @@ class FileCard extends JPanel {
         int h = getHeight();
         int arc = Theme.CARD_ARC;
 
-        g2.setColor(Theme.CARD);
+        // Background: tint to NEUTRAL_BG whenever the card is "active" — either
+        // mouse-hover (clickable affordance) or drag-hover (drop target affordance).
+        Color background = (mouseHover || dragHover) ? Theme.NEUTRAL_BG : Theme.CARD;
+        g2.setColor(background);
         g2.fillRoundRect(0, 0, w, h, arc, arc);
 
-        g2.setColor(hasFile() ? Theme.SUCCESS : Theme.CARD_BORDER);
-        g2.setStroke(new BasicStroke(hasFile() ? 1.4f : 1f));
+        Color borderColor;
+        float borderWidth;
+        BasicStroke stroke;
+        if (dragHover) {
+            borderColor = Theme.PRIMARY;
+            borderWidth = 1.8f;
+            stroke = new BasicStroke(borderWidth);
+        } else if (hasFile()) {
+            borderColor = Theme.SUCCESS;
+            borderWidth = mouseHover ? 1.8f : 1.4f;
+            stroke = new BasicStroke(borderWidth);
+        } else {
+            // Empty state: dashed border signals "drop zone". On hover, darken
+            // it so the click affordance reads alongside the background tint.
+            borderColor = mouseHover ? Theme.TEXT_SECONDARY : Theme.TEXT_MUTED;
+            borderWidth = 1.4f;
+            stroke = new BasicStroke(
+                borderWidth, BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER,
+                1f, new float[] { 6f, 5f }, 0f);
+        }
+        g2.setColor(borderColor);
+        g2.setStroke(stroke);
         g2.drawRoundRect(0, 0, w - 1, h - 1, arc, arc);
 
         g2.dispose();
@@ -131,26 +266,29 @@ class FileCard extends JPanel {
         String filename = dialog.getFile();
         String directory = dialog.getDirectory();
         if (filename != null && directory != null) {
-            File chosen = new File(directory, filename);
-            List<String> sheets = sheetSelector.select(chosen);
-            if (sheets == null) return;   // user cancelled the picker — keep current state
-
-            selectedFile = chosen;
-            selectedSheets = sheets;
-            recordCount = -1;             // unknown until the background read finishes
-            fullFileName = chosen.getName();
-
-            statusIcon.setIcon(ICON_CHECKED);
-            statusLabel.setToolTipText(fullFileName);
-            statusLabel.setForeground(Theme.TEXT_PRIMARY);
-            updateFilenameDisplay();
-            detailLabel.setText(formatSheetSummary(sheets.size(), -1));
-            chooseButton.setText("Change file");
-
-            repaint();          // border colour reflects selection
-            onChange.run();
-            countRecordsAsync(chosen, sheets);
+            acceptFile(new File(directory, filename));
         }
+    }
+
+    /** Shared entry point for file selection from either the chooser or a drop. */
+    private void acceptFile(File chosen) {
+        List<String> sheets = sheetSelector.select(chosen);
+        if (sheets == null) return;   // user cancelled the picker — keep current state
+
+        selectedFile = chosen;
+        selectedSheets = sheets;
+        recordCount = -1;             // unknown until the background read finishes
+        fullFileName = chosen.getName();
+
+        iconLabel.setIcon(ICON_LOADED);
+        mainLabel.setForeground(Theme.TEXT_PRIMARY);
+        mainLabel.setToolTipText(fullFileName);
+        updateFilenameDisplay();
+        detailLabel.setText(formatSheetSummary(sheets.size(), -1));
+
+        repaint();          // border style reflects selection
+        onChange.run();
+        countRecordsAsync(chosen, sheets);
     }
 
     /** Reads the selected sheets off the EDT to get the record count, then updates the UI. */
@@ -179,22 +317,21 @@ class FileCard extends JPanel {
     }
 
     /**
-     * Sets the status label to a truncated form of the current filename that fits the card's
-     * available width. The full name is preserved in fullFileName + tooltip.
-     * Also clamps the label's maximumSize so the layout can't accidentally give it more width
-     * than the truncation accounted for.
+     * Truncates the displayed filename to fit the card width. Full name lives in
+     * fullFileName + tooltip. Clamps preferred/maximum size so layout can't
+     * expand the label beyond the truncated width.
      */
     private void updateFilenameDisplay() {
         if (fullFileName.isEmpty()) {
-            statusLabel.setText("");
-            statusLabel.setPreferredSize(null);
-            statusLabel.setMaximumSize(null);
+            // Empty state: mainLabel shows the hint, no clamping needed.
+            mainLabel.setPreferredSize(null);
+            mainLabel.setMaximumSize(null);
             return;
         }
         int available = computeAvailableTextWidth();
         if (available <= 0) return;   // card not yet sized; ComponentListener will re-call
 
-        FontMetrics fm = statusLabel.getFontMetrics(statusLabel.getFont());
+        FontMetrics fm = mainLabel.getFontMetrics(mainLabel.getFont());
         String displayed = fullFileName;
         if (fm.stringWidth(fullFileName) > available) {
             String ellipsis = "…";
@@ -209,27 +346,21 @@ class FileCard extends JPanel {
             }
             displayed = fullFileName.substring(0, len) + ellipsis;
         }
-        statusLabel.setText(displayed);
+        mainLabel.setText(displayed);
 
-        // Hard-clamp the label's size so neither BoxLayout nor FlowLayout can expand it past available.
         int actualWidth = fm.stringWidth(displayed);
         Dimension size = new Dimension(actualWidth, fm.getHeight());
-        statusLabel.setPreferredSize(size);
-        statusLabel.setMaximumSize(size);
+        mainLabel.setPreferredSize(size);
+        mainLabel.setMaximumSize(size);
         revalidate();
     }
 
-    /** Pixels available for the filename text inside the status row. */
+    /** Pixels available for the filename text. The label is centred, so the
+     *  whole content width minus padding is fair game. */
     private int computeAvailableTextWidth() {
-        Insets insets = getInsets();   // matches the empty border padding (22,24,24,24)
-        int cardContentWidth = getWidth() - insets.left - insets.right;
-        int iconWidth = Math.max(20, statusIcon.getPreferredSize().width);
-        // FlowLayout positions children with hgap (8) on the left, between, AND right.
-        int flowLeftPad = 8;
-        int flowBetweenGap = 8;
-        int flowRightPad = 8;
-        int safety = 8;                // extra breathing room for font metric quirks
-        return cardContentWidth - flowLeftPad - iconWidth - flowBetweenGap - flowRightPad - safety;
+        Insets insets = getInsets();
+        int safety = 8;   // breathing room for font metric quirks
+        return getWidth() - insets.left - insets.right - safety;
     }
 
     private static String formatSheetSummary(int sheetCount, int rowCount) {

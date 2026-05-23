@@ -1,6 +1,6 @@
 package gui;
 
-import org.kordamp.ikonli.materialdesign2.MaterialDesignC;
+import org.kordamp.ikonli.bootstrapicons.BootstrapIcons;
 import org.kordamp.ikonli.swing.FontIcon;
 
 import javax.swing.*;
@@ -57,7 +57,7 @@ public final class SidePanel extends JPanel {
         title.setForeground(Theme.TEXT_PRIMARY);
         header.add(title, BorderLayout.WEST);
 
-        JButton close = new JButton(FontIcon.of(MaterialDesignC.CLOSE, 18, Theme.TEXT_SECONDARY));
+        JButton close = new JButton(FontIcon.of(BootstrapIcons.X, 18, Theme.TEXT_SECONDARY));
         close.setBorder(BorderFactory.createEmptyBorder(4, 4, 4, 4));
         close.setContentAreaFilled(false);
         close.setFocusPainted(false);

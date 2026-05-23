@@ -5,7 +5,7 @@ import java.awt.Font;
 
 final class Theme {
 
-    static final Color BACKGROUND       = new Color(0xF4, 0xF6, 0xFB);
+    static final Color BACKGROUND       = Color.WHITE;
     static final Color CARD             = Color.WHITE;
     static final Color CARD_BORDER      = new Color(0xE2, 0xE8, 0xF0);
     static final Color CARD_BORDER_HOVER= new Color(0xCB, 0xD5, 0xE1);
