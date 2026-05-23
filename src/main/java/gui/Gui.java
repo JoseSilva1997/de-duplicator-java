@@ -4,6 +4,7 @@ import javax.swing.*;
 import javax.swing.border.Border;
 
 import backend.DeduplicationService;
+import backend.UserSettings;
 import org.kordamp.ikonli.materialdesign2.MaterialDesignC;
 import org.kordamp.ikonli.swing.FontIcon;
 
@@ -239,6 +240,7 @@ public class Gui extends JFrame {
         Path secondaryPath = attendeeCard.getFile().toPath();
         List<String> primarySheets   = guestCard.getSelectedSheets();
         List<String> secondarySheets = attendeeCard.getSelectedSheets();
+        UserSettings settings = new UserSettings(sidePanel.isDropRowsWithoutEmailEnabled());
 
         processButton.setEnabled(false);
         processButton.setBackground(Theme.PRIMARY_DISABLED);
@@ -249,7 +251,7 @@ public class Gui extends JFrame {
         SwingWorker<DeduplicationService.Summary, Void> worker = new SwingWorker<>() {
             @Override
             protected DeduplicationService.Summary doInBackground() throws Exception {
-                return service.run(primaryPath, primarySheets, secondaryPath, secondarySheets);
+                return service.run(primaryPath, primarySheets, secondaryPath, secondarySheets, settings);
             }
             @Override
             protected void done() {
@@ -275,16 +277,10 @@ public class Gui extends JFrame {
         panel.add(summaryLine("Kept:    " + s.totalKept()));
         panel.add(summaryLine("Removed: " + s.totalRemoved()));
 
-        if (s.junkRowsDropped() > 0 || s.noEmailDropped() > 0) {
+        if (s.noEmailDropped() > 0) {
             panel.add(Box.createVerticalStrut(10));
-            if (s.junkRowsDropped() > 0) {
-                panel.add(summaryLine("Removed " + s.junkRowsDropped()
-                        + " row(s) with no email or name"));
-            }
-            if (s.noEmailDropped() > 0) {
-                panel.add(summaryLine("Removed " + s.noEmailDropped()
-                        + " row(s) with no email"));
-            }
+            panel.add(summaryLine("Removed " + s.noEmailDropped()
+                    + " row(s) with no email"));
         }
 
         panel.add(Box.createVerticalStrut(12));

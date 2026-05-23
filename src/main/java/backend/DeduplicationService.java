@@ -35,7 +35,8 @@ public final class DeduplicationService {
     /** Read both files for the selected sheets, dedup per primary sheet, write outputs. */
     public Summary run(
             Path primaryPath,   List<String> primarySheetSelection,
-            Path secondaryPath, List<String> secondarySheetSelection) throws IOException {
+            Path secondaryPath, List<String> secondarySheetSelection,
+            UserSettings settings) throws IOException {
 
         IFileReader primaryReader   = FileReaderFactory.forPath(primaryPath);
         IFileReader secondaryReader = FileReaderFactory.forPath(secondaryPath);
@@ -43,24 +44,22 @@ public final class DeduplicationService {
         Map<String, SheetData> primarySheets   = primaryReader.read(primaryPath, primarySheetSelection);
         Map<String, SheetData> secondarySheets = secondaryReader.read(secondaryPath, secondarySheetSelection);
 
-        // Sum the mapper-rejected junk count across primary sheets, before the
-        // email filter compresses the list further.
-        int junkRowsDropped = primarySheets.values().stream()
-                .mapToInt(SheetData::junkRowsDropped)
-                .sum();
         int primaryRowsBefore = primarySheets.values().stream()
                 .mapToInt(sd -> sd.records().size())
                 .sum();
 
-        // Stakeholder requirement: guests without an email are dropped before dedup —
-        // they can't be contacted, so they don't belong in the output. Secondary records
-        // without email are kept; they can still pull guests out via name+company matches.
-        primarySheets = requireEmail(primarySheets);
-
-        int primaryRowsAfter = primarySheets.values().stream()
-                .mapToInt(sd -> sd.records().size())
-                .sum();
-        int noEmailDropped = primaryRowsBefore - primaryRowsAfter;
+        // Optional: drop guests without an email before dedup. Stakeholder rule
+        // (when enabled): they can't be contacted, so they don't belong in the
+        // output. Secondary records without email are kept either way, since
+        // they can still pull guests out via name+company matches.
+        int noEmailDropped = 0;
+        if (settings.dropRowsWithoutEmail()) {
+            primarySheets = requireEmail(primarySheets);
+            int primaryRowsAfter = primarySheets.values().stream()
+                    .mapToInt(sd -> sd.records().size())
+                    .sum();
+            noEmailDropped = primaryRowsBefore - primaryRowsAfter;
+        }
 
         // All selected secondary sheets get treated as one combined pool of "people
         // to match against" — same as the Python reference (pd.concat).
@@ -84,7 +83,6 @@ public final class DeduplicationService {
             primarySheets.size(),
             totalKept,
             totalRemoved,
-            junkRowsDropped,
             noEmailDropped,
             primaryPath.getParent()
         );
@@ -98,8 +96,7 @@ public final class DeduplicationService {
             List<ContactRecord> filtered = sd.records().stream()
                     .filter(r -> r.email() != null)
                     .toList();
-            // junkRowsDropped already counted upstream; carry it through unchanged.
-            result.put(entry.getKey(), new SheetData(filtered, sd.availableFields(), sd.junkRowsDropped()));
+            result.put(entry.getKey(), new SheetData(filtered, sd.availableFields()));
         }
         return result;
     }
@@ -109,7 +106,6 @@ public final class DeduplicationService {
         int sheetsProcessed,
         int totalKept,
         int totalRemoved,
-        int junkRowsDropped,
         int noEmailDropped,
         Path outputDirectory
     ) {}

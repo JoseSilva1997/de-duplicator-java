@@ -25,6 +25,8 @@ public final class SidePanel extends JPanel {
     private static final float SCRIM_ALPHA = 0.40f;
 
     private final Scrim scrim = new Scrim();
+    private final JCheckBox dropNoEmailCheckbox = buildSettingCheckbox(
+        "Remove guests with no email address", true);
     private boolean open = false;
     private Timer animator;
 
@@ -84,14 +86,14 @@ public final class SidePanel extends JPanel {
 
         panel.add(sectionLabel("Extra filtering"));
         panel.add(Box.createVerticalStrut(6));
-
-        JCheckBox noEmail = stubCheckbox("Remove guests with no email address.");
-        panel.add(noEmail);
-
-        panel.add(Box.createVerticalStrut(10));
+        panel.add(dropNoEmailCheckbox);
 
         panel.add(Box.createVerticalGlue());
         return wrapScrollable(panel);
+    }
+
+    public boolean isDropRowsWithoutEmailEnabled() {
+        return dropNoEmailCheckbox.isSelected();
     }
 
     private JComponent buildHowItWorksTab() {
@@ -135,11 +137,13 @@ public final class SidePanel extends JPanel {
             + "</ol>"
 
             + "<h3 style=\"" + h + "\">Output</h3>"
-            + "<p style=\"" + p + "\">Two files are written next to the application:</p>"
+            + "<p style=\"" + p + "\">Two Excel files are written next to the application:</p>"
             + "<ul style=\"margin:0 0 10px 18px; padding:0;\">"
-            + "<li style=\"" + li + "\"><b>Updated guests list</b>: the cleaned guest list, one sheet per input sheet.</li>"
-            + "<li style=\"" + li + "\"><b>People removed</b>: every removed guest with the reason and confidence score.</li>"
+            + "<li style=\"" + li + "\"><b>Updated guests list</b>: the cleaned guest list.</li>"
+            + "<li style=\"" + li + "\"><b>People removed</b>: every removed guest with the reason and confidence score for each match. Skipped entirely if no one was removed.</li>"
             + "</ul>"
+            + "<p style=\"" + p + "\">If you selected multiple sheets from a workbook, each sheet is deduplicated independently against the full pool of attendees, and the output files preserve that structure: one sheet in the output per sheet in the input. Sheets with no removals are omitted from the <b>People removed</b> file.</p>"
+            + "<p style=\"" + p + "\">CSV inputs are treated as a single sheet named after the file.</p>"
             + "</body></html>";
     }
 
@@ -151,14 +155,12 @@ public final class SidePanel extends JPanel {
         return label;
     }
 
-    private static JCheckBox stubCheckbox(String text) {
-        JCheckBox box = new JCheckBox(text);
+    private static JCheckBox buildSettingCheckbox(String text, boolean selected) {
+        JCheckBox box = new JCheckBox(text, selected);
         box.setOpaque(false);
-        box.setEnabled(false);
         box.setFont(Theme.FONT_REGULAR);
-        box.setForeground(Theme.TEXT_SECONDARY);
+        box.setForeground(Theme.TEXT_PRIMARY);
         box.setAlignmentX(Component.LEFT_ALIGNMENT);
-        box.setToolTipText("Coming soon");
         return box;
     }
 
