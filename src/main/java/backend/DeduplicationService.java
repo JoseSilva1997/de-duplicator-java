@@ -77,14 +77,14 @@ public final class DeduplicationService {
             totalRemoved += res.removed().size();
         }
 
-        writer.write(primaryPath, results);
+        Path outputDir = writer.write(primaryPath, results);
 
         return new Summary(
             primarySheets.size(),
             totalKept,
             totalRemoved,
             noEmailDropped,
-            primaryPath.getParent()
+            outputDir
         );
     }
 

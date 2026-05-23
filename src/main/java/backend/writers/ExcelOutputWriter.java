@@ -21,15 +21,18 @@ import java.util.Set;
 
 public final class ExcelOutputWriter {
 
-    public void write(Path primaryInputPath, Map<String, DedupResult> results) throws IOException {
+    /** Writes the kept + removed workbooks and returns the directory they landed in. */
+    public Path write(Path primaryInputPath, Map<String, DedupResult> results) throws IOException {
         Path outputDir = resolveOutputDir();
-        String base = stripExtension(primaryInputPath.getFileName().toString());
+        Files.createDirectories(outputDir);
 
+        String base = stripExtension(primaryInputPath.getFileName().toString());
         Path keptPath = outputDir.resolve("Updated guests list from " + base + ".xlsx");
         Path removedPath = outputDir.resolve("People removed from " + base + ".xlsx");
 
         writeKept(keptPath, results);
         writeRemoved(removedPath, results);
+        return outputDir;
     }
 
     private void writeKept(Path out, Map<String, DedupResult> results) throws IOException {
@@ -151,20 +154,26 @@ public final class ExcelOutputWriter {
         return name.length() > 31 ? name.substring(0, 31) : name;
     }
 
-    // In production (packaged jar) outputs go next to the jar. In development
+    // In production (packaged jar) outputs go on the user's desktop, where the
+    // stakeholder wants them visible without hunting through folders. In dev
     // (running from target/classes via IDE or `mvn exec:java`) they go to the
-    // project's /outputs folder so the build tree stays clean.
+    // project's /outputs folder so the build tree stays clean and we don't
+    // litter the developer's actual desktop.
     private static Path resolveOutputDir() {
+        if (isDevelopmentRun()) {
+            return Paths.get("").toAbsolutePath().resolve("outputs");
+        }
+        return Paths.get(System.getProperty("user.home"), "Desktop");
+    }
+
+    private static boolean isDevelopmentRun() {
         try {
             Path codeSource = Paths.get(
                 ExcelOutputWriter.class.getProtectionDomain().getCodeSource().getLocation().toURI()
             );
-            if (Files.isDirectory(codeSource)) {
-                return Paths.get("").toAbsolutePath().resolve("outputs");
-            }
-            return codeSource.getParent();
+            return Files.isDirectory(codeSource);
         } catch (URISyntaxException | NullPointerException e) {
-            return Paths.get("").toAbsolutePath().resolve("outputs");
+            return false;
         }
     }
 

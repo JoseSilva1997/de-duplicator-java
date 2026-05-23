@@ -137,7 +137,7 @@ public final class SidePanel extends JPanel {
             + "</ol>"
 
             + "<h3 style=\"" + h + "\">Output</h3>"
-            + "<p style=\"" + p + "\">Two Excel files are written next to the application:</p>"
+            + "<p style=\"" + p + "\">Two Excel files are written to your desktop:</p>"
             + "<ul style=\"margin:0 0 10px 18px; padding:0;\">"
             + "<li style=\"" + li + "\"><b>Updated guests list</b>: the cleaned guest list.</li>"
             + "<li style=\"" + li + "\"><b>People removed</b>: every removed guest with the reason and confidence score for each match. Skipped entirely if no one was removed.</li>"
