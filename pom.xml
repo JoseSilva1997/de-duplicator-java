@@ -5,8 +5,8 @@
                              http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>com.irina</groupId>
-    <artifactId>irina-deduplicator</artifactId>
+    <groupId>com.guestlistcleaner</groupId>
+    <artifactId>guest-list-cleaner</artifactId>
     <version>1.0.0-SNAPSHOT</version>
     <packaging>jar</packaging>
 
@@ -58,5 +58,49 @@
         </dependency>
 
     </dependencies>
+
+    <build>
+        <plugins>
+            <!--
+                Bundles all dependencies into a single executable jar so jpackage
+                (or `java -jar`) has everything it needs in one file. Filters out
+                jar signature entries (POI's transitive deps are signed) which
+                would otherwise crash with "Invalid signature file digest".
+                ServicesResourceTransformer merges META-INF/services from POI
+                and other libs that use SPI; ManifestResourceTransformer writes
+                the Main-Class entry.
+            -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>3.5.3</version>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals><goal>shade</goal></goals>
+                        <configuration>
+                            <createDependencyReducedPom>false</createDependencyReducedPom>
+                            <filters>
+                                <filter>
+                                    <artifact>*:*</artifact>
+                                    <excludes>
+                                        <exclude>META-INF/*.SF</exclude>
+                                        <exclude>META-INF/*.DSA</exclude>
+                                        <exclude>META-INF/*.RSA</exclude>
+                                    </excludes>
+                                </filter>
+                            </filters>
+                            <transformers>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                    <mainClass>App</mainClass>
+                                </transformer>
+                            </transformers>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
 
 </project>

@@ -1,0 +1,17 @@
+target/
+reference/
+outputs/
+*.class
+*.exe
+CLAUDE.md
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.settings/
+.project
+.classpath
+
+# OS
+.DS_Store
