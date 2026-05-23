@@ -4,9 +4,18 @@
 #   - JDK 17+ on PATH (provides both `mvn` invocations via JAVA_HOME and `jpackage`).
 #   - Maven on PATH.
 #
+# Usage:
+#   ./build-exe.ps1                 # local build: auto-bumps installer-version.txt.
+#   ./build-exe.ps1 -Version 1.2.3  # CI build: uses the supplied version, no file mutation.
+#
 # Output:
 #   <repo root>/Guest List Cleaner-<version>.exe  -- Windows installer.
 #     Ship this single file.
+
+[CmdletBinding()]
+param(
+    [string]$Version
+)
 
 $ErrorActionPreference = 'Stop'
 
@@ -31,17 +40,26 @@ function Resolve-Jpackage {
 $jpackage = Resolve-Jpackage
 Write-Host "Using jpackage: $jpackage" -ForegroundColor DarkGray
 
-# Auto-bump the installer version. installer-version.txt holds the version
-# this script will USE for the build it's about to run; we increment the patch
-# segment first so each release ships a unique, increasing version (MSI rejects
-# upgrades to the same or older version).
-$versionFile = Join-Path $PSScriptRoot 'installer-version.txt'
-if (-not (Test-Path $versionFile)) { '1.0.0' | Set-Content $versionFile -Encoding utf8 }
-$parts = (Get-Content $versionFile -Raw).Trim().Split('.')
-if ($parts.Count -ne 3) { throw "installer-version.txt must be MAJOR.MINOR.PATCH, got: $($parts -join '.')" }
-$parts[2] = [int]$parts[2] + 1
-$appVersion = $parts -join '.'
-$appVersion | Set-Content $versionFile -Encoding utf8
+# Determine the version for this build.
+#   - If -Version was passed (CI), use it verbatim. The caller is responsible
+#     for bumping installer-version.txt and committing the change.
+#   - Otherwise (local build), auto-bump the patch segment of installer-version.txt
+#     so each local release ships a unique, increasing version (MSI rejects
+#     upgrades to the same or older version).
+if ($Version) {
+    if ($Version -notmatch '^\d+\.\d+\.\d+$') {
+        throw "-Version must be MAJOR.MINOR.PATCH, got: $Version"
+    }
+    $appVersion = $Version
+} else {
+    $versionFile = Join-Path $PSScriptRoot 'installer-version.txt'
+    if (-not (Test-Path $versionFile)) { '1.0.0' | Set-Content $versionFile -Encoding utf8 }
+    $parts = (Get-Content $versionFile -Raw).Trim().Split('.')
+    if ($parts.Count -ne 3) { throw "installer-version.txt must be MAJOR.MINOR.PATCH, got: $($parts -join '.')" }
+    $parts[2] = [int]$parts[2] + 1
+    $appVersion = $parts -join '.'
+    $appVersion | Set-Content $versionFile -Encoding utf8
+}
 Write-Host "Building version $appVersion" -ForegroundColor Cyan
 
 $jarName       = 'guest-list-cleaner-1.0.0-SNAPSHOT.jar'
@@ -76,6 +94,7 @@ Write-Host 'Running jpackage...' -ForegroundColor Cyan
     --vendor 'Jose Silva' `
     --dest $dest `
     --win-per-user-install `
+    --win-upgrade-uuid '022a5ff2-6cf9-459c-bb1a-79d67a76076a' `
     --win-menu `
     --win-menu-group $appName `
     --win-shortcut `

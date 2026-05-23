@@ -1,0 +1,82 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: 'Which version segment to bump'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up JDK 17 (Temurin, includes jpackage)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Compute next version
+        id: version
+        shell: pwsh
+        run: |
+          $current = (Get-Content installer-version.txt -Raw).Trim()
+          $parts = $current.Split('.')
+          if ($parts.Count -ne 3) { throw "installer-version.txt must be MAJOR.MINOR.PATCH, got: $current" }
+          $major = [int]$parts[0]
+          $minor = [int]$parts[1]
+          $patch = [int]$parts[2]
+          switch ('${{ inputs.bump }}') {
+            'major' { $major++; $minor = 0; $patch = 0 }
+            'minor' { $minor++; $patch = 0 }
+            'patch' { $patch++ }
+          }
+          $next = "$major.$minor.$patch"
+          Write-Host "Bumping $current -> $next"
+          $next | Set-Content installer-version.txt -Encoding utf8 -NoNewline
+          "version=$next" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+
+      - name: Build installer
+        shell: pwsh
+        run: ./build-exe.ps1 -Version ${{ steps.version.outputs.version }}
+
+      - name: Commit version bump and tag
+        shell: pwsh
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add installer-version.txt
+          git commit -m "Release v$env:VERSION"
+          git tag "v$env:VERSION"
+          git push origin HEAD:${{ github.ref_name }}
+          git push origin "v$env:VERSION"
+
+      - name: Create GitHub Release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          gh release create "v$env:VERSION" `
+            "Guest List Cleaner-$env:VERSION.exe" `
+            --title "v$env:VERSION" `
+            --generate-notes
