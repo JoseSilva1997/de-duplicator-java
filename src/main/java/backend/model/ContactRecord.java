@@ -6,7 +6,8 @@ public record ContactRecord(
     String fullName,
     String email,
     String company,
-    String jobTitle
+    String jobTitle,
+    String country
 ){
 
     public ContactRecord {
@@ -21,6 +22,7 @@ public record ContactRecord(
         if (email != null) email = email.toLowerCase();
         company = normalize(company);
         jobTitle = normalize(jobTitle);
+        country = normalize(country);
     }
 
     private static String normalize(String value) {
@@ -35,8 +37,20 @@ public record ContactRecord(
             && fullName == null
             && email == null
             && company == null
-            && jobTitle == null;
+            && jobTitle == null
+            && country == null;
+    }
+
+    /**
+     * True if the record has at least one field that identifies a person — email or any
+     * name field. Rows lacking all of these (e.g., only a company or job title) aren't
+     * deduplicable and shouldn't enter the pipeline.
+     */
+    public boolean hasIdentifier() {
+        return email != null
+            || firstName != null
+            || lastName != null
+            || fullName != null;
     }
 
 }
-

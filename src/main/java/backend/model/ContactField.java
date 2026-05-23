@@ -13,7 +13,8 @@ public enum ContactField {
     FULL_NAME("Full Name", List.of("fullname")),
     EMAIL("Email", List.of("email", "emailaddress", "emailenteremail")),
     COMPANY("Company", List.of("company", "organization", "companyname", "organisation")),
-    JOB_TITLE("Job Title", List.of("jobtitle", "position", "job", "role"));
+    JOB_TITLE("Job Title", List.of("jobtitle", "position", "job", "role")),
+    COUNTRY("Country", List.of("country", "region", "countryname", "countryregion"));
 
     private final String label;
     private final List<String> aliases;

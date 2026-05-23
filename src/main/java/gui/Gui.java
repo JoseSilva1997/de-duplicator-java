@@ -218,6 +218,19 @@ public class Gui extends JFrame {
         panel.add(summaryLine("Processed " + s.sheetsProcessed() + " sheet(s)"));
         panel.add(summaryLine("Kept:    " + s.totalKept()));
         panel.add(summaryLine("Removed: " + s.totalRemoved()));
+
+        if (s.junkRowsDropped() > 0 || s.noEmailDropped() > 0) {
+            panel.add(Box.createVerticalStrut(10));
+            if (s.junkRowsDropped() > 0) {
+                panel.add(summaryLine("Removed " + s.junkRowsDropped()
+                        + " row(s) with no email or name"));
+            }
+            if (s.noEmailDropped() > 0) {
+                panel.add(summaryLine("Removed " + s.noEmailDropped()
+                        + " row(s) with no email"));
+            }
+        }
+
         panel.add(Box.createVerticalStrut(12));
         panel.add(summaryLine("Output saved to:"));
 

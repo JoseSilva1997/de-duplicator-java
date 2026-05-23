@@ -43,6 +43,25 @@ public final class DeduplicationService {
         Map<String, SheetData> primarySheets   = primaryReader.read(primaryPath, primarySheetSelection);
         Map<String, SheetData> secondarySheets = secondaryReader.read(secondaryPath, secondarySheetSelection);
 
+        // Sum the mapper-rejected junk count across primary sheets, before the
+        // email filter compresses the list further.
+        int junkRowsDropped = primarySheets.values().stream()
+                .mapToInt(SheetData::junkRowsDropped)
+                .sum();
+        int primaryRowsBefore = primarySheets.values().stream()
+                .mapToInt(sd -> sd.records().size())
+                .sum();
+
+        // Stakeholder requirement: guests without an email are dropped before dedup —
+        // they can't be contacted, so they don't belong in the output. Secondary records
+        // without email are kept; they can still pull guests out via name+company matches.
+        primarySheets = requireEmail(primarySheets);
+
+        int primaryRowsAfter = primarySheets.values().stream()
+                .mapToInt(sd -> sd.records().size())
+                .sum();
+        int noEmailDropped = primaryRowsBefore - primaryRowsAfter;
+
         // All selected secondary sheets get treated as one combined pool of "people
         // to match against" — same as the Python reference (pd.concat).
         List<ContactRecord> secondaryPool = secondarySheets.values().stream()
@@ -65,8 +84,24 @@ public final class DeduplicationService {
             primarySheets.size(),
             totalKept,
             totalRemoved,
+            junkRowsDropped,
+            noEmailDropped,
             primaryPath.getParent()
         );
+    }
+
+    /** Returns a copy of the sheet map with records lacking an email filtered out. */
+    private static Map<String, SheetData> requireEmail(Map<String, SheetData> sheets) {
+        Map<String, SheetData> result = new LinkedHashMap<>();
+        for (var entry : sheets.entrySet()) {
+            SheetData sd = entry.getValue();
+            List<ContactRecord> filtered = sd.records().stream()
+                    .filter(r -> r.email() != null)
+                    .toList();
+            // junkRowsDropped already counted upstream; carry it through unchanged.
+            result.put(entry.getKey(), new SheetData(filtered, sd.availableFields(), sd.junkRowsDropped()));
+        }
+        return result;
     }
 
     /** What the GUI shows in the result dialog. */
@@ -74,6 +109,8 @@ public final class DeduplicationService {
         int sheetsProcessed,
         int totalKept,
         int totalRemoved,
+        int junkRowsDropped,
+        int noEmailDropped,
         Path outputDirectory
     ) {}
 }

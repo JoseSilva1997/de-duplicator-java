@@ -71,17 +71,19 @@ public final class ExcelReader implements IFileReader {
             }
         }
 
-        if (resolver == null) return new SheetData(List.of(), Collections.emptySet());
+        if (resolver == null) return new SheetData(List.of(), Collections.emptySet(), 0);
 
         ContactRecordMapper mapper = new ContactRecordMapper(resolver);
         List<ContactRecord> records = new ArrayList<>();
+        int junk = 0;
         for (int r = headerRowIndex + 1; r <= lastRow; r++) {
             Row row = sheet.getRow(r);
             if (row == null) continue;
             ContactRecord record = mapper.map(idx -> cellString(row.getCell(idx)));
             if (record != null) records.add(record);
+            else junk++;
         }
-        return new SheetData(records, resolver.availableFields());
+        return new SheetData(records, resolver.availableFields(), junk);
     }
 
     private static List<String> readRowCells(Row row) {

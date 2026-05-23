@@ -67,16 +67,21 @@ public final class ExcelOutputWriter {
     }
 
     /**
-     * Picks which contact fields to output for a given source. Full Name is dropped when
-     * the source had both structured First Name and Last Name — they carry the same info
-     * and the Full Name column would be empty anyway.
+     * Picks which contact fields to output for a given source.
+     *  - Full Name is dropped when the source had both structured First Name and Last Name
+     *    (the column would be empty and the same info is in the split fields).
+     *  - Country is dropped if the source didn't have it (opt-in pass-through field).
+     *  - Other fields are always written, even if empty in this source, for consistency.
      */
     private static List<ContactField> columnsFor(Set<ContactField> sourceFields) {
         boolean hasStructuredName = sourceFields.contains(ContactField.FIRST_NAME)
                                  && sourceFields.contains(ContactField.LAST_NAME);
+        boolean hasCountry = sourceFields.contains(ContactField.COUNTRY);
+
         List<ContactField> cols = new ArrayList<>(ContactField.values().length);
         for (ContactField f : ContactField.values()) {
             if (f == ContactField.FULL_NAME && hasStructuredName) continue;
+            if (f == ContactField.COUNTRY && !hasCountry) continue;
             cols.add(f);
         }
         return cols;
@@ -133,6 +138,7 @@ public final class ExcelOutputWriter {
             case EMAIL      -> r.email();
             case COMPANY    -> r.company();
             case JOB_TITLE  -> r.jobTitle();
+            case COUNTRY    -> r.country();
         };
     }
 
