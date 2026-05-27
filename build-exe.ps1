@@ -1,7 +1,8 @@
 # Builds a self-contained Windows app (no JVM install required for the end user).
 #
 # Prereqs on the build machine (not on the user's machine):
-#   - JDK 17+ on PATH (provides both `mvn` invocations via JAVA_HOME and `jpackage`).
+#   - JDK 25+ on PATH (provides both `mvn` invocations via JAVA_HOME and `jpackage`).
+#     The pom compiles to release 25, so an older JDK will fail the Maven build.
 #   - Maven on PATH.
 #
 # Usage:
@@ -35,7 +36,7 @@ function Resolve-Jpackage {
     foreach ($p in $candidates) {
         if (Test-Path $p) { return $p }
     }
-    throw 'Could not find jpackage.exe. Set JAVA_HOME to a JDK 14+ install, or add its bin/ to PATH.'
+    throw 'Could not find jpackage.exe. Set JAVA_HOME to a JDK 21+ install, or add its bin/ to PATH.'
 }
 $jpackage = Resolve-Jpackage
 Write-Host "Using jpackage: $jpackage" -ForegroundColor DarkGray

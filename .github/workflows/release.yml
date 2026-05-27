@@ -27,11 +27,11 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Set up JDK 17 (Temurin, includes jpackage)
+      - name: Set up JDK 25 (Temurin, includes jpackage)
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '17'
+          java-version: '25'
 
       - name: Compute next version
         id: version
