@@ -77,5 +77,5 @@ To make a non-patch version jump (e.g. `1.0.5` → `1.1.0`), edit `installer-ver
 
 ## License
 
-[PolyForm Noncommercial 1.0.0](LICENSE). You may use, modify, and share this software for any non-commercial purpose. Commercial use is not permitted.
+[MIT](LICENSE). You may use, modify, and share this software freely.
 
