@@ -4,6 +4,8 @@ outputs/
 *.class
 *.exe
 CLAUDE.md
+RELEASING.md
+
 
 # IDE
 .idea/
